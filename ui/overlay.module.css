@@ -1,0 +1,272 @@
+/* Overlay chrome and narrative copy. The scene lives behind all of this. */
+
+.root {
+  position: relative;
+  z-index: 10;
+}
+
+/* ── act ────────────────────────────────────────────────────────────────── */
+
+.act {
+  position: relative;
+  /* Height comes from the timeline weight, set inline. */
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--gutter);
+  pointer-events: none;
+}
+
+.inner {
+  width: 100%;
+  max-width: 42rem;
+  pointer-events: auto;
+  will-change: opacity, transform;
+}
+
+.alignCenter .inner {
+  margin: 0 auto;
+  text-align: center;
+  max-width: 46rem;
+}
+
+.alignCenter .lead,
+.alignCenter .bodyCopy {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.alignLeft .inner {
+  margin-right: auto;
+  margin-left: min(6vw, 5rem);
+}
+
+.alignRight .inner {
+  margin-left: auto;
+  margin-right: min(6vw, 5rem);
+  text-align: right;
+}
+
+.alignRight .lead,
+.alignRight .bodyCopy {
+  margin-left: auto;
+}
+
+.kickerRow {
+  display: block;
+  margin-bottom: clamp(1.1rem, 2vw, 1.8rem);
+}
+
+/* ── headline degradation ───────────────────────────────────────────────── */
+
+.headlineStack {
+  position: relative;
+}
+
+/* The degraded layer sits exactly on top of the clean one and cross-fades.
+   Until the Redaction face is installed the effect falls back to a blur plus a
+   horizontal smear, which reads as unresolved signal rather than as an error. */
+.headlineDegraded {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--frost);
+  will-change: opacity, filter;
+}
+
+.headlineClean {
+  will-change: opacity;
+}
+
+/* ── chrome ─────────────────────────────────────────────────────────────── */
+
+.hud {
+  position: fixed;
+  z-index: 30;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.hudLeft {
+  top: clamp(18px, 2.4vw, 28px);
+  left: var(--gutter);
+}
+
+.hudLeft b {
+  color: var(--text);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+}
+
+.hudRight {
+  top: clamp(14px, 2.2vw, 24px);
+  right: var(--gutter);
+}
+
+.langButton {
+  background: none;
+  border: 1px solid var(--hairline);
+  color: var(--text-dim);
+  font: inherit;
+  letter-spacing: 0.16em;
+  padding: 5px 10px;
+  border-radius: 1px;
+  cursor: pointer;
+  transition: color 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
+}
+
+.langButton:hover {
+  color: var(--text-strong);
+  border-color: rgba(200, 214, 232, 0.4);
+}
+
+.langButton i {
+  font-style: normal;
+  color: var(--frost);
+}
+
+/* rail */
+
+.rail {
+  position: fixed;
+  left: var(--gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s var(--ease-out);
+}
+
+.railOn {
+  opacity: 1;
+}
+
+.railItem {
+  color: var(--text-faint);
+  opacity: 0.42;
+  padding: 2px 0;
+  white-space: nowrap;
+  transition: color 0.5s var(--ease-out), opacity 0.5s var(--ease-out);
+}
+
+.railItem::before {
+  content: '○';
+  font-size: 0.45rem;
+  vertical-align: 0.14em;
+  margin-right: 0.7em;
+}
+
+.railPast {
+  opacity: 0.7;
+}
+
+.railActive {
+  color: var(--frost);
+  opacity: 1;
+}
+
+.railActive::before {
+  content: '●';
+}
+
+/* progress spine */
+
+.spine {
+  position: fixed;
+  right: var(--gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  width: 1px;
+  height: 168px;
+  background: var(--hairline);
+}
+
+.spineFill {
+  position: absolute;
+  left: -1px;
+  width: 3px;
+  top: 0;
+  height: 0;
+  background: var(--frost);
+}
+
+/* scroll cue */
+
+.cue {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  transition: opacity 0.6s var(--ease-out);
+}
+
+/* ── contact ────────────────────────────────────────────────────────────── */
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.6rem;
+  justify-content: center;
+  margin-top: 2rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+
+.links a {
+  color: var(--text-dim);
+  text-decoration: none;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 3px;
+  transition: color 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
+}
+
+.links a:hover {
+  color: var(--ash);
+  border-color: var(--ash);
+}
+
+@media (max-width: 820px) {
+  .rail {
+    display: none;
+  }
+
+  .spine {
+    right: 14px;
+    height: 110px;
+  }
+
+  .alignLeft .inner,
+  .alignRight .inner {
+    margin: 0;
+    text-align: left;
+    max-width: 100%;
+  }
+
+  .alignRight .lead,
+  .alignRight .bodyCopy {
+    margin-left: 0;
+  }
+}

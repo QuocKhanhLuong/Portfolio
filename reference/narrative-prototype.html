@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Alvin — Learning How to See</title>
+<style>
+:root{
+  --bg:#04060b; --tx:#dbe4f0; --dim:#7286a3; --faint:#3d4c66;
+  --a1:#4f8cff; --a2:#48e6d0; --a3:#b08cff; --a4:#ff9068; --a5:#ffc861;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:auto}
+body{
+  background:var(--bg); color:var(--tx); overflow-x:hidden;
+  font-family:'Inter','Helvetica Neue',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+canvas#gl{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;display:block}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");}
+.vig{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse 75% 65% at 50% 50%,transparent 30%,rgba(4,6,11,.72) 100%)}
+
+/* ---------- chrome ---------- */
+.hud{position:fixed;z-index:20;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);
+  font-family:ui-monospace,'SF Mono',Menlo,monospace}
+.hud.tl{top:26px;left:32px}
+.hud.tl b{color:var(--tx);font-weight:500;letter-spacing:.18em}
+.hud.tr{top:22px;right:32px}
+#langBtn{background:none;border:1px solid rgba(114,134,163,.3);color:var(--dim);font:inherit;
+  padding:5px 11px;border-radius:2px;cursor:pointer;transition:.25s;letter-spacing:.16em}
+#langBtn:hover{color:var(--tx);border-color:rgba(219,228,240,.5)}
+#langBtn i{font-style:normal;color:var(--a2)}
+
+/* motif rail */
+.rail{position:fixed;left:32px;top:50%;transform:translateY(-50%);z-index:20;
+  font-family:ui-monospace,Menlo,monospace;font-size:9px;letter-spacing:.18em;
+  display:flex;flex-direction:column;gap:0;pointer-events:none;opacity:0;transition:opacity .8s}
+.rail.on{opacity:1}
+.rail div{color:var(--faint);transition:color .5s,opacity .5s;padding:3px 0;opacity:.45;white-space:nowrap}
+.rail div.act{color:var(--a2);opacity:1}
+.rail div.past{opacity:.75}
+.rail div::before{content:'○ ';font-size:7px;vertical-align:1px}
+.rail div.act::before{content:'● '}
+
+.prog{position:fixed;right:32px;top:50%;transform:translateY(-50%);z-index:20;
+  width:1px;height:180px;background:rgba(114,134,163,.18)}
+.prog i{position:absolute;left:-1px;top:0;width:3px;background:var(--a2);height:0;
+  box-shadow:0 0 12px var(--a2);transition:height .1s linear}
+
+/* ---------- narrative ---------- */
+main{position:relative;z-index:10}
+.act{min-height:170vh;display:flex;align-items:center;padding:0 32px;position:relative}
+.act.tall{min-height:230vh}
+.inner{max-width:660px;width:100%;margin:0 auto;opacity:0;transform:translateY(28px);
+  transition:opacity 1.1s cubic-bezier(.2,.7,.2,1),transform 1.1s cubic-bezier(.2,.7,.2,1)}
+.inner.vis{opacity:1;transform:none}
+.act.left .inner{margin:0 0 0 max(6vw,32px)}
+.act.right .inner{margin:0 max(6vw,32px) 0 auto;text-align:right}
+
+h1,h2,.big,p,.tag,.chap,.mono,.pipe{text-shadow:0 1px 26px rgba(4,6,11,.96),0 0 9px rgba(4,6,11,.9)}
+.tag{font-family:ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.28em;
+  text-transform:uppercase;color:var(--a2);margin-bottom:26px;display:block}
+.tag em{font-style:normal;color:var(--faint)}
+h1{font-size:clamp(34px,5.6vw,72px);font-weight:200;line-height:1.1;letter-spacing:-.035em;margin-bottom:26px}
+h1 b{font-weight:500}
+h2{font-size:clamp(26px,4vw,46px);font-weight:200;line-height:1.18;letter-spacing:-.03em;margin-bottom:22px}
+h2 b{font-weight:500;color:#fff}
+.big{font-size:clamp(20px,2.6vw,30px);font-weight:200;line-height:1.45;letter-spacing:-.02em;color:var(--tx)}
+.big + .big{margin-top:20px}
+p{color:var(--dim);font-size:16px;max-width:52ch;margin-bottom:16px;font-weight:300}
+.act.right p{margin-left:auto}
+p:last-child{margin-bottom:0}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.1em;color:var(--faint);
+  line-height:2;white-space:pre;margin:30px 0}
+.mono b{color:var(--a2);font-weight:400}
+.mono i{font-style:normal;color:var(--a4)}
+
+/* pipeline for act II */
+.pipe{display:flex;flex-direction:column;gap:0;margin:34px 0;font-family:ui-monospace,Menlo,monospace}
+.pipe .s{font-size:11px;letter-spacing:.24em;color:var(--faint);padding:7px 0;transition:.5s;position:relative;padding-left:22px}
+.pipe .s::before{content:'';position:absolute;left:0;top:50%;width:10px;height:1px;background:currentColor;opacity:.4}
+.pipe .s.on{color:var(--a2)}
+.pipe .arr{color:var(--faint);opacity:.3;font-size:10px;padding-left:4px}
+
+/* chapter card (project) */
+.chap{border-left:1px solid rgba(114,134,163,.22);padding:2px 0 2px 26px;margin-top:38px}
+.chap .k{font-family:ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.22em;color:var(--a4);margin-bottom:10px}
+.chap h3{font-size:23px;font-weight:300;letter-spacing:-.02em;margin-bottom:10px;color:#fff}
+.chap p{font-size:14.5px;margin-bottom:14px}
+.chap .meta{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.12em;color:var(--faint)}
+.chap .meta span{color:var(--dim)}
+
+/* constellation */
+.constel{width:100%;max-width:780px;margin:34px 0 0;position:relative}
+.constel svg{width:100%;height:auto;display:block;overflow:visible}
+.cn{cursor:pointer}
+.cn circle{transition:r .35s cubic-bezier(.2,.7,.2,1),fill .35s,opacity .35s}
+.cn circle.hit{transition:none}
+.cn:hover circle.hit,.cn.sel circle.hit{r:26;fill:transparent}
+.cn text{font-family:ui-monospace,Menlo,monospace;font-size:8.4px;letter-spacing:.14em;
+  fill:var(--dim);text-transform:uppercase;transition:fill .3s;pointer-events:none}
+.cn:hover circle,.cn.sel circle{r:9;fill:var(--a5)}
+.cn:hover text,.cn.sel text{fill:#fff}
+.cedge{stroke:rgba(114,134,163,.3);stroke-width:1;transition:stroke .35s,stroke-width .35s}
+.cedge.hot{stroke:rgba(255,200,97,.75);stroke-width:1.6}
+.cpanel{margin-top:22px;min-height:112px;border-top:1px solid rgba(114,134,163,.2);padding-top:18px}
+.cpanel .ph{font-family:ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.2em;color:var(--a5);margin-bottom:9px}
+.cpanel h4{font-size:17px;font-weight:400;color:#fff;margin-bottom:8px;letter-spacing:-.01em}
+.cpanel p{font-size:14px;margin-bottom:9px}
+.cpanel .lk{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.14em;color:var(--faint)}
+.cpanel .lk s{text-decoration:none;color:var(--a2);border-bottom:1px solid rgba(72,230,208,.3);margin-right:16px;cursor:pointer}
+
+/* finale */
+#finale{min-height:240vh;position:relative;z-index:10}
+#finale .stick{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;padding:0 32px}
+.fin1,.fin2,.fin3{transition:opacity 1.3s ease,transform 1.3s cubic-bezier(.2,.7,.2,1)}
+.fin2,.fin3{opacity:0;transform:translateY(22px)}
+.fin2.vis,.fin3.vis{opacity:1;transform:none}
+.links{display:flex;gap:30px;flex-wrap:wrap;margin-top:8px;font-family:ui-monospace,Menlo,monospace;
+  font-size:12px;letter-spacing:.14em}
+.links a{color:var(--dim);text-decoration:none;border-bottom:1px solid rgba(114,134,163,.28);
+  padding-bottom:3px;transition:.3s}
+.links a:hover{color:var(--a2);border-color:var(--a2)}
+.foot{position:relative;z-index:10;padding:70px 32px 60px;text-align:center;
+  font-family:ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.2em;color:var(--faint)}
+
+.scrollcue{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:20;
+  font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.26em;color:var(--faint);
+  transition:opacity .6s;text-transform:uppercase}
+.scrollcue.hide{opacity:0}
+
+[data-en]{display:none}
+html[lang="en"] [data-vi]{display:none}
+html[lang="en"] [data-en]{display:revert}
+
+@media(max-width:820px){
+  .rail{display:none}.prog{right:18px;height:120px}
+  .hud.tl{left:20px;top:22px}.hud.tr{right:18px;top:16px}
+  .hud.tl span{display:none}.hud.tl{font-size:10px}
+  .act{padding:0 20px;min-height:150vh}
+  .act.right .inner,.act.left .inner{margin:0 auto;text-align:left}
+  p{max-width:100%}
+}
+</style>
+</head>
+<body>
+
+<canvas id="gl"></canvas>
+<div class="grain"></div>
+<div class="vig"></div>
+
+<div class="hud tl"><b>ALVIN</b> &nbsp;· &nbsp;<span data-vi>nghiên cứu thị giác máy tính</span><span data-en>computer vision research</span></div>
+<div class="hud tr"><button id="langBtn">[ <i>EN</i> / VI ]</button></div>
+
+<nav class="rail" id="rail">
+  <div>signal</div><div>pixel</div><div>image</div><div>feature map</div>
+  <div>point cloud</div><div>3d volume</div><div>human</div><div>research graph</div><div>constellation</div>
+</nav>
+<div class="prog"><i id="progBar"></i></div>
+<div class="scrollcue" id="cue"><span data-vi>cuộn</span><span data-en>scroll</span></div>
+
+<main>
+
+<!-- ═══ PROLOGUE ═══ -->
+<section class="act" data-act="0">
+  <div class="inner" style="text-align:center;max-width:820px">
+    <span class="tag">Prologue <em>/ 00</em></span>
+    <h1><span data-vi>Chúng ta không nhìn thấy<br>thế giới <b>cùng một lúc</b>.</span><span data-en>We don't see the world<br><b>all at once</b>.</span></h1>
+    <p style="margin:0 auto" data-vi>Ánh sáng đến như tín hiệu. Tín hiệu thành điểm ảnh. Điểm ảnh thành cấu trúc. Ở đâu đó dọc chuỗi ấy, nhìn trở thành hiểu.</p>
+    <p style="margin:0 auto" data-en>Light arrives as signal. Signal becomes pixels. Pixels become structure. Somewhere along that chain, seeing becomes understanding.</p>
+  </div>
+</section>
+
+<!-- ═══ ACT I ═══ -->
+<section class="act left" data-act="1">
+  <div class="inner">
+    <span class="tag">Act I <em>/ Curiosity</em></span>
+    <h2><span data-vi>Tôi bắt đầu từ một<br><b>nỗi ám ảnh đơn giản</b>.</span><span data-en>I started with a simple<br><b>obsession</b>.</span></h2>
+    <div class="big" style="color:var(--a2)"><span data-vi>Làm thế nào một cỗ máy học được cách nhìn?</span><span data-en>How does a machine learn to see?</span></div>
+    <p style="margin-top:26px" data-vi>Không có mục "Về tôi" trên trang này. Tôi được kể xuyên suốt — qua những gì tôi đã cố gắng dạy máy nhìn thấy.</p>
+    <p style="margin-top:26px" data-en>There is no About section on this site. I get told throughout — through what I've tried to teach machines to see.</p>
+    <div class="mono"><span data-vi>tín hiệu → <b>điểm ảnh</b> → cấu trúc</span><span data-en>signal → <b>pixel</b> → structure</span></div>
+  </div>
+</section>
+
+<!-- ═══ ACT II ═══ -->
+<section class="act right tall" data-act="2">
+  <div class="inner">
+    <span class="tag">Act II <em>/ Teaching machines to see</em></span>
+    <h2><span data-vi>Một bức ảnh không có<br><b>ý nghĩa nội tại</b>.</span><span data-en>An image has no<br><b>intrinsic meaning</b>.</span></h2>
+    <p data-vi>Nó chỉ là một mảng số. Ý nghĩa là thứ ta xây dựng lên trên nó — từng lớp một.</p>
+    <p data-en>It is only an array of numbers. Meaning is what we build on top of it — one layer at a time.</p>
+    <div class="pipe" id="pipe" style="align-items:flex-end">
+      <div class="s" data-p="0">RAW IMAGE</div><div class="arr">↓</div>
+      <div class="s" data-p="1">FEATURES</div><div class="arr">↓</div>
+      <div class="s" data-p="2">REPRESENTATION</div><div class="arr">↓</div>
+      <div class="s" data-p="3">PREDICTION</div>
+    </div>
+    <div class="chap" style="border-left:none;border-right:1px solid rgba(114,134,163,.22);padding:2px 26px 2px 0">
+      <div class="k">Chapter 01 <span style="color:var(--faint)">— project</span></div>
+      <h3>[ Tên project 1 ]</h3>
+      <p data-vi>Một dòng về vấn đề bạn giải quyết, và điều gì làm cách tiếp cận này khác biệt. Hai câu, không hơn — phần còn lại nằm ở case study riêng.</p>
+      <p data-en>One line on the problem you solved, and what made the approach different. Two sentences, no more — the rest lives in a dedicated case study.</p>
+      <div class="meta">PyTorch · <span>CNN</span> · <span>self-supervised</span> — <span data-vi>xem chi tiết</span><span data-en>read case study</span> →</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ACT III ═══ -->
+<section class="act left tall" data-act="3">
+  <div class="inner">
+    <span class="tag">Act III <em>/ From pixels to space</em></span>
+    <h2><span data-vi>Rồi mặt phẳng<br><b>có chiều sâu</b>.</span><span data-en>Then the flat plane<br><b>gained depth</b>.</span></h2>
+    <p data-vi>Một bức ảnh là hình chiếu. Ở đâu đó phía sau nó là hình học thật đã tạo ra nó — và ta có thể lấy lại được.</p>
+    <p data-en>An image is a projection. Somewhere behind it is the real geometry that produced it — and it can be recovered.</p>
+    <div class="mono"><span data-vi>mặt phẳng ảnh
+   ↓ <b>độ sâu</b>
+point cloud
+   ↓
+<i>hình học 3D</i></span><span data-en>image plane
+   ↓ <b>depth</b>
+point cloud
+   ↓
+<i>3D geometry</i></span></div>
+    <p data-vi>Bạn không bấm vào một tab tên "Projects". Bạn đi xuyên qua chúng.</p>
+    <p data-en>You don't click a tab labelled "Projects". You travel through them.</p>
+    <div class="chap">
+      <div class="k">Chapter 02 <span style="color:var(--faint)">— project</span></div>
+      <h3>[ Tên project 3D/CV ]</h3>
+      <p data-vi>Project liên quan reconstruction, depth estimation, hoặc NeRF/Gaussian splatting xuất hiện ở đây — đúng lúc camera đi xuyên qua point cloud.</p>
+      <p data-en>Your reconstruction, depth estimation, or NeRF/Gaussian-splatting work appears here — exactly as the camera flies through the point cloud.</p>
+      <div class="meta">Open3D · <span>multi-view</span> · <span>SfM</span> — <span data-vi>xem chi tiết</span><span data-en>read case study</span> →</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ACT IV ═══ -->
+<section class="act right tall" data-act="4">
+  <div class="inner">
+    <span class="tag" style="color:var(--a4)">Act IV <em>/ Seeing what matters</em></span>
+    <h2><span data-vi>Không phải hình học nào<br>cũng <b>trừu tượng</b>.</span><span data-en>Not all geometry<br>is <b>abstract</b>.</span></h2>
+    <div class="big" data-vi>Một mô hình có thể phát hiện một quy luật.<br><span style="color:var(--a4)">Nhưng một hệ thống hữu ích phải hiểu được<br>quy luật đó có ý nghĩa gì với một con người.</span></div>
+    <div class="big" data-en>A model can detect a pattern.<br><span style="color:var(--a4)">But a useful system has to understand<br>what that pattern means for a human.</span></div>
+    <p style="margin-top:30px" data-vi>Đây là lúc nghiên cứu đi vào câu chuyện. Không phải danh sách trích dẫn — mỗi bài báo là một khám phá trong cùng một hành trình.</p>
+    <p style="margin-top:30px" data-en>This is where the research enters the story. Not a citation list — each paper is a discovery along one continuous journey.</p>
+    <div class="chap" style="border-left:none;border-right:1px solid rgba(255,144,104,.3);padding:2px 26px 2px 0">
+      <div class="k" style="color:var(--a4)">Chapter 03 <span style="color:var(--faint)">— medical AI</span></div>
+      <h3>[ Tên project y tế ]</h3>
+      <p data-vi>Segmentation, phát hiện tổn thương, hoặc phân tích volume — kèm một con số thật về tác động lâm sàng, không phải chỉ mAP.</p>
+      <p data-en>Segmentation, lesion detection, or volumetric analysis — with one real number about clinical impact, not just mAP.</p>
+      <div class="meta">MONAI · <span>3D U-Net</span> · <span>DICOM</span> — <span data-vi>xem chi tiết</span><span data-en>read case study</span> →</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ACT V ═══ -->
+<section class="act tall" data-act="5" style="justify-content:center">
+  <div class="inner" style="max-width:820px;margin:0 auto">
+    <span class="tag" style="color:var(--a5)">Act V <em>/ Research is unfinished</em></span>
+    <h2 style="margin-bottom:14px"><span data-vi>Đây không phải<br>một <b>danh sách</b>.</span><span data-en>This is not<br>a <b>list</b>.</span></h2>
+    <p data-vi>Các project không rời rạc. Chúng là những bước trong cùng một cuộc khám phá. Di chuột lên một node để xem nó dẫn đến đâu.</p>
+    <p data-en>The projects aren't separate. They're steps in one exploration. Hover a node to see where it led.</p>
+
+    <div class="constel">
+      <svg viewBox="0 0 780 300" id="csvg" aria-label="research constellation">
+        <g id="cedges"></g><g id="cnodes"></g>
+      </svg>
+      <div class="cpanel" id="cpanel"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ACT VI ═══ -->
+<section id="finale">
+ <div class="stick">
+  <div class="inner" style="text-align:center;max-width:760px">
+    <div class="fin1">
+      <span class="tag">Act VI <em>/ The frontier</em></span>
+      <h1 style="font-size:clamp(30px,4.6vw,58px)"><span data-vi>Tôi vẫn đang học<br>cách <b>nhìn</b>.</span><span data-en>I'm still learning<br>how to <b>see</b>.</span></h1>
+    </div>
+    <div class="fin2" id="fin2" style="margin-top:60px">
+      <div class="big" style="color:#fff"><span data-vi>Cùng xây thứ sẽ đến tiếp theo.</span><span data-en>Let's build what comes next.</span></div>
+      <div class="links" style="justify-content:center;margin-top:34px">
+        <a href="#">EMAIL</a><a href="#">GITHUB</a><a href="#">SCHOLAR</a><a href="#">LINKEDIN</a><a href="#">CV ↓</a>
+      </div>
+    </div>
+    <div class="fin3" id="fin3" style="margin-top:66px">
+      <p style="margin:0 auto;font-size:13px;color:var(--faint);max-width:44ch" data-vi>Trang mở đầu bằng: chúng ta không nhìn thấy thế giới cùng một lúc. Vòng tròn khép lại.</p>
+      <p style="margin:0 auto;font-size:13px;color:var(--faint);max-width:44ch" data-en>The site opened with: we don't see the world all at once. The loop closes.</p>
+    </div>
+  </div>
+ </div>
+</section>
+</main>
+
+<div class="foot">PROTOTYPE · <span data-vi>một motif duy nhất, chín trạng thái</span><span data-en>one motif, nine states</span> · 2026</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ONE MOTIF, NINE STATES — raw WebGL, zero dependencies
+   signal → pixel → image → feature map → point cloud
+         → 3d volume → human → research graph → constellation
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+var cv=document.getElementById('gl');
+var gl=cv.getContext('webgl',{antialias:false,alpha:false});
+var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var mobile=innerWidth<820;
+if(!gl){cv.style.display='none';}
+
+var N = mobile?7000:17000;
+var NS = 9;
+
+/* ---------- seeded rng ---------- */
+function mul(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+var rnd=mul(20260816);
+
+/* ---------- the "eye": the image every early state is made of ---------- */
+var EX=new Float32Array(N),EY=new Float32Array(N),EL=new Float32Array(N);
+(function buildEye(){
+  var w=1.0,h=0.40; // eye half-extent in normalized units
+  for(var i=0;i<N;i++){
+    var x,y,ok=false,g=0;
+    while(!ok&&g<40){
+      g++;
+      x=(rnd()*2-1)*w; y=(rnd()*2-1)*h;
+      var lidT=h*Math.pow(Math.max(0,1-(x/w)*(x/w)),0.62);
+      if(Math.abs(y)<=lidT) ok=true;
+    }
+    if(!ok){x=(rnd()*2-1)*0.3;y=(rnd()*2-1)*0.12;}
+    EX[i]=x;EY[i]=y;
+    // luminance structure: sclera / iris ring / pupil / specular
+    var r=Math.sqrt(x*x+(y*1.32)*(y*1.32));
+    var lum;
+    if(r<0.082) lum=0.015;                                   // pupil
+    else if(r<0.30){                                         // iris — the bright part
+      var ang=Math.atan2(y*1.32,x);
+      lum=0.52+0.42*Math.abs(Math.sin(ang*22.0))*(1-r/0.30)+0.34*(r/0.30);
+    } else {
+      lum=0.26-0.09*Math.abs(y)/h;                           // sclera, deliberately dim
+      var lidT2=h*Math.pow(Math.max(0,1-(x/w)*(x/w)),0.62);
+      lum*=Math.min(1,(lidT2-Math.abs(y))/0.09+0.20);        // soft lid falloff
+    }
+    var sx=x-0.115,sy=y-0.095;                               // specular highlight
+    lum+=0.95*Math.exp(-(sx*sx+sy*sy)/0.0013);
+    EL[i]=Math.max(0.012,Math.min(1.3,lum));
+  }
+})();
+
+/* graph node layout, mirrors the SVG constellation in Act V */
+var GN=[[0,.62,0],[-1.32,.06,-.2],[1.32,.06,.2],[-.52,-.66,.15],[.62,-.60,-.25],[0,0,0],[.05,-.02,.55]];
+var GE=[[5,0],[5,1],[5,2],[5,3],[5,4],[1,3],[2,4],[0,2],[0,1],[5,6],[6,4]];
+
+/* ---------- state buffers ---------- */
+var POS=[],BRI=[];
+for(var s=0;s<NS;s++){POS.push(new Float32Array(N*3));BRI.push(new Float32Array(N));}
+function set(s,i,x,y,z,b){var k=i*3;POS[s][k]=x;POS[s][k+1]=y;POS[s][k+2]=z;BRI[s][i]=b;}
+
+var SW=2.6, SH=2.6*0.40/1.0*2.0; // world scale of the image plane
+var W=2.15, H=1.92;
+
+for(var i=0;i<N;i++){
+  var ex=EX[i],ey=EY[i],lum=EL[i],r1=rnd(),r2=rnd(),r3=rnd();
+
+  /* 0 SIGNAL — a raster scan collapsed into one waveform */
+  var u=(ex+1)*0.5;
+  var wv=0.42*Math.sin(u*29.0)+0.20*Math.sin(u*11.0+1.7)+0.11*Math.sin(u*61.0)+0.30*(lum-0.5);
+  set(0,i, ex*W, wv*0.55+(r1-0.5)*0.03, (r2-0.5)*0.05, 0.35+lum*0.35);
+
+  /* 1 PIXEL — the same image, brutally quantised */
+  var q=0.062, qy=0.070;
+  var cx=Math.round(ex/q)*q, cy=Math.round(ey/qy)*qy;
+  var ql=Math.round(lumAt(cx,cy)*4)/4;
+  set(1,i, (cx+(ex-cx)*0.62)*W, (cy+(ey-cy)*0.62)*H, 0, 0.03+Math.pow(ql,1.5)*0.80);
+
+  /* 2 IMAGE — full resolution */
+  set(2,i, ex*W, ey*H, 0, Math.pow(lum,1.25)*0.85);
+
+  /* 3 FEATURE MAP — 8 tiles, each an oriented edge response */
+  var t=i%8, tc=t%4, tr=(t/4)|0;
+  var th=t*Math.PI/8.0;
+  var eps=0.045;
+  var lx=lumAt(ex+eps,ey)-lumAt(ex-eps,ey);
+  var ly=lumAt(ex,ey+eps)-lumAt(ex,ey-eps);
+  var resp=Math.abs(lx*Math.cos(th)+ly*Math.sin(th));
+  set(3,i,(tc-1.5)*1.42+ex*0.66, (0.5-tr)*1.10+ey*0.62, (r3-0.5)*0.05, 0.10+Math.min(1.3,resp*3.4));
+
+  /* 4 POINT CLOUD — depth lifted from luminance */
+  var rr=Math.sqrt(ex*ex+ey*ey*1.7);
+  var dz=(lum-0.45)*0.55+Math.exp(-rr*rr*3.4)*0.72-0.18;
+  set(4,i, ex*W, ey*H, dz*1.35+(r1-0.5)*0.05, 0.28+lum*0.62);
+
+  /* 5 3D VOLUME — the cloud closes into a solid form */
+  var ph=Math.acos(2*((i+0.5)/N)-1), ta=i*2.399963;
+  var rad=0.78+0.30*Math.pow(r1,0.5)*(lum>0.5?0.5:1.0);
+  set(5,i, rad*Math.sin(ph)*Math.cos(ta)*1.28, rad*Math.cos(ph)*1.05, rad*Math.sin(ph)*Math.sin(ta)*1.28, 0.24+lum*0.55);
+
+  /* 6 HUMAN — two lobes, sulcal folds, a scan slice */
+  var side=(i%2)?1:-1;
+  var ph2=Math.acos(2*r1-1), ta2=r2*6.28318;
+  var br=0.72+0.10*Math.sin(ph2*9.0)*Math.sin(ta2*7.0);
+  var hx=side*0.30+br*Math.sin(ph2)*Math.cos(ta2)*0.62;
+  var hy=br*Math.cos(ph2)*0.72-0.02;
+  var hz=br*Math.sin(ph2)*Math.sin(ta2)*0.80;
+  hy-=0.30*Math.exp(-(hx*hx)/0.03)*Math.max(0,-hz);
+  set(6,i, hx*1.42, hy*1.42, hz*1.30, 0.20+lum*0.40+(Math.abs(hz)<0.10?0.75:0));
+
+  /* 7 RESEARCH GRAPH — particles live on the edges */
+  var g=graphPoint(r1,r2,r3,i);
+  set(7,i,g[0],g[1],g[2],g[3]);
+
+  /* 8 CONSTELLATION — everything, far away */
+  var ph3=Math.acos(2*r2-1), ta3=r3*6.28318;
+  var R=3.4+2.9*Math.pow(r1,1.6);
+  set(8,i, R*Math.sin(ph3)*Math.cos(ta3), R*Math.cos(ph3)*0.72, R*Math.sin(ph3)*Math.sin(ta3),
+        0.10+Math.pow(rnd(),4.0)*1.5);
+}
+
+function lumAt(x,y){
+  var r=Math.sqrt(x*x+(y*1.32)*(y*1.32));
+  if(r<0.082)return 0.015;
+  if(r<0.30){var a=Math.atan2(y*1.32,x);return 0.52+0.42*Math.abs(Math.sin(a*22))*(1-r/0.30)+0.34*(r/0.30);}
+  return 0.26-0.09*Math.abs(y)/0.40;
+}
+
+function graphPoint(r1,r2,r3,i){
+  if(r1<0.30){ // clustered at nodes
+    var n=GN[i%GN.length];
+    var s=0.085;
+    return [n[0]*1.5+(r2-0.5)*s, n[1]*1.5+(r3-0.5)*s, n[2]*1.5+(rnd()-0.5)*s, 0.55+rnd()*0.8];
+  }
+  var e=GE[i%GE.length], a=GN[e[0]], b=GN[e[1]], t=r2;
+  var j=0.028;
+  return [(a[0]+(b[0]-a[0])*t)*1.5+(r3-0.5)*j,
+          (a[1]+(b[1]-a[1])*t)*1.5+(rnd()-0.5)*j,
+          (a[2]+(b[2]-a[2])*t)*1.5+(rnd()-0.5)*j, 0.16+0.24*Math.sin(t*3.14159)];
+}
+
+/* ---------- palette + camera per state ---------- */
+var COL=[[.24,.46,1],[.30,.62,1],[.55,.84,1],[.28,.95,.84],[.40,.74,1],[.66,.55,1],[1,.58,.44],[1,.79,.40],[.80,.87,1]];
+//        yaw   pitch  dist  drift
+var CAM=[[0,0,3.9,0],[0,0,3.7,0],[0,0,3.3,0],[0,0,4.3,.05],[.34,.20,4.7,.15],[.55,.28,4.0,.42],[.18,.10,3.5,.30],[.10,.05,4.1,.16],[.30,.16,9.2,.10]];
+/* where the motif sits on screen, so it never fights the copy: [panX, panY, opacity] */
+var OFF=[[0,-.88,.95],[-.78,.12,1.0],[.80,.05,1.0],[0,.34,.80],[-.60,.05,.95],[-.55,.05,.85],[.86,-.12,.85],[0,-.80,.50],[0,0,1.0]];
+
+/* ---------- gl setup ---------- */
+var prog,loc={},buf={};
+if(gl){
+  var VS='attribute vec3 aA;attribute vec3 aB;attribute float aBA;attribute float aBB;attribute float aS;'+
+  'uniform mat4 uP,uV;uniform highp float uTime,uPx;uniform mediump float uT;varying float vB;'+
+  'void main(){float t=uT;'+
+  'vec3 p=mix(aA,aB,t);float b=mix(aBA,aBB,t);'+
+  'p+=vec3(sin(uTime*.5+aS*40.)*.008,cos(uTime*.42+aS*33.)*.008,sin(uTime*.31+aS*27.)*.008);'+
+  'vec4 mv=uV*vec4(p,1.);gl_Position=uP*mv;'+
+  'gl_PointSize=clamp(uPx*(1.0+b*0.8)/max(.35,-mv.z),1.0,9.0);vB=b;}';
+  var FS='precision mediump float;uniform vec3 uCA,uCB;uniform mediump float uT,uDim;varying float vB;'+
+  'void main(){vec2 d=gl_PointCoord-.5;float r=dot(d,d);if(r>.25)discard;'+
+  'float a=smoothstep(.25,.02,r);'+
+  'vec3 c=mix(uCA,uCB,uT);c=mix(c,vec3(1.),clamp(vB-.62,0.,.55));'+
+  'gl_FragColor=vec4(c,a*clamp(vB,.05,1.15)*uDim);}';
+  function sh(t,src){var o=gl.createShader(t);gl.shaderSource(o,src);gl.compileShader(o);return o;}
+  prog=gl.createProgram();
+  gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));
+  gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,FS));
+  gl.linkProgram(prog);gl.useProgram(prog);
+  ['aA','aB','aBA','aBB','aS'].forEach(function(k){loc[k]=gl.getAttribLocation(prog,k);});
+  ['uP','uV','uT','uTime','uPx','uCA','uCB','uDim'].forEach(function(k){loc[k]=gl.getUniformLocation(prog,k);});
+  ['aA','aB','aBA','aBB','aS'].forEach(function(k){buf[k]=gl.createBuffer();});
+  var seeds=new Float32Array(N);for(var q=0;q<N;q++)seeds[q]=rnd();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf.aS);gl.bufferData(gl.ARRAY_BUFFER,seeds,gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(loc.aS);gl.vertexAttribPointer(loc.aS,1,gl.FLOAT,false,0,0);
+  gl.disable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
+  gl.clearColor(0.0157,0.0235,0.0431,1);
+}
+var curA=-1,curB=-1;
+function upload(a,b){
+  if(a===curA&&b===curB)return;curA=a;curB=b;
+  var m=[['aA',POS[a],3],['aB',POS[b],3],['aBA',BRI[a],1],['aBB',BRI[b],1]];
+  for(var j=0;j<m.length;j++){
+    gl.bindBuffer(gl.ARRAY_BUFFER,buf[m[j][0]]);
+    gl.bufferData(gl.ARRAY_BUFFER,m[j][1],gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(loc[m[j][0]]);
+    gl.vertexAttribPointer(loc[m[j][0]],m[j][2],gl.FLOAT,false,0,0);
+  }
+}
+
+/* ---------- math ---------- */
+function persp(f,a,n,fa){var t=1/Math.tan(f/2);return new Float32Array([t/a,0,0,0, 0,t,0,0, 0,0,(fa+n)/(n-fa),-1, 0,0,2*fa*n/(n-fa),0]);}
+function look(e,c){
+  var zx=e[0]-c[0],zy=e[1]-c[1],zz=e[2]-c[2];
+  var l=Math.hypot(zx,zy,zz)||1;zx/=l;zy/=l;zz/=l;
+  var xx=zz*0-0*zy, xy=0*zx-1*zz, xz=1*zy-0*zx; // up=(0,1,0) cross z
+  xx=1*zz-0*zy; xy=0*zx-0*zz; xz=0*zy-1*zx;
+  l=Math.hypot(xx,xy,xz)||1;xx/=l;xy/=l;xz/=l;
+  var yx=zy*xz-zz*xy, yy=zz*xx-zx*xz, yz=zx*xy-zy*xx;
+  return new Float32Array([xx,yx,zx,0, xy,yy,zy,0, xz,yz,zz,0,
+    -(xx*e[0]+xy*e[1]+xz*e[2]), -(yx*e[0]+yy*e[1]+yz*e[2]), -(zx*e[0]+zy*e[1]+zz*e[2]),1]);
+}
+function ease(t){return t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
+
+/* ---------- scroll ---------- */
+var target=0,smooth=0,dpr=Math.min(devicePixelRatio||1,2);
+function resize(){
+  cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;
+  if(gl)gl.viewport(0,0,cv.width,cv.height);
+}
+addEventListener('resize',resize);resize();
+
+var rail=document.getElementById('rail'),railKids=rail.children;
+var bar=document.getElementById('progBar'),cue=document.getElementById('cue');
+var mx=0,my=0;
+addEventListener('mousemove',function(e){mx=(e.clientX/innerWidth-0.5);my=(e.clientY/innerHeight-0.5);});
+
+var t0=performance.now();
+function frame(){
+  var max=document.body.scrollHeight-innerHeight;
+  target=max>0?scrollY/max:0;
+  smooth+=(target-smooth)*(reduce?1:0.075);
+  var time=(performance.now()-t0)/1000;
+
+  var f=Math.min(NS-1.0001,Math.max(0,smooth*(NS-1)));
+  var a=Math.floor(f), b=Math.min(NS-1,a+1), t=ease(f-a);
+
+  if(gl){
+    upload(a,b);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    var yaw=CAM[a][0]+(CAM[b][0]-CAM[a][0])*t + mx*0.16 + time*0.028*(CAM[a][3]+(CAM[b][3]-CAM[a][3])*t)*8;
+    var pit=CAM[a][1]+(CAM[b][1]-CAM[a][1])*t - my*0.10;
+    var dst=CAM[a][2]+(CAM[b][2]-CAM[a][2])*t;
+    var ox=OFF[a][0]+(OFF[b][0]-OFF[a][0])*t, oy=OFF[a][1]+(OFF[b][1]-OFF[a][1])*t;
+    var od=OFF[a][2]+(OFF[b][2]-OFF[a][2])*t;
+    if(mobile){ox*=0.20;oy*=0.45;od*=0.85;}
+    var ex2=Math.sin(yaw)*Math.cos(pit)*dst+ox, ey2=Math.sin(pit)*dst+oy, ez2=Math.cos(yaw)*Math.cos(pit)*dst;
+    gl.uniformMatrix4fv(loc.uP,false,persp(1.05,cv.width/cv.height,0.1,60));
+    gl.uniformMatrix4fv(loc.uV,false,look([ex2,ey2,ez2],[ox,oy,0]));
+    gl.uniform1f(loc.uT,t);gl.uniform1f(loc.uTime,reduce?0:time);
+    gl.uniform1f(loc.uDim,od*0.78);
+    gl.uniform1f(loc.uPx,(mobile?5.4:6.2)*dpr);
+    gl.uniform3fv(loc.uCA,COL[a]);gl.uniform3fv(loc.uCB,COL[b]);
+    gl.drawArrays(gl.POINTS,0,N);
+  }
+
+  bar.style.height=(smooth*100)+'%';
+  var ai=Math.round(f);
+  for(var k=0;k<railKids.length;k++){
+    railKids[k].className=(k===ai?'act':(k<ai?'past':''));
+  }
+  rail.classList.toggle('on',smooth>0.02);
+  cue.classList.toggle('hide',smooth>0.03);
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- section reveals ---------- */
+var io=new IntersectionObserver(function(es){
+  es.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); });
+},{threshold:0.28});
+document.querySelectorAll('.inner').forEach(function(e){io.observe(e);});
+
+/* pipeline highlight in Act II */
+var pipe=document.getElementById('pipe'),psteps=pipe.querySelectorAll('.s');
+var act2=document.querySelector('[data-act="2"]');
+function pipeTick(){
+  var r=act2.getBoundingClientRect();
+  var p=1-(r.bottom-innerHeight*0.5)/(r.height||1);
+  p=Math.max(0,Math.min(1,p));
+  var idx=Math.floor(p*4.4)-1;
+  psteps.forEach(function(s,j){s.classList.toggle('on',j<=idx);});
+  requestAnimationFrame(pipeTick);
+}
+requestAnimationFrame(pipeTick);
+
+/* finale staged reveal */
+var fin=document.getElementById('finale'),f2=document.getElementById('fin2'),f3=document.getElementById('fin3');
+function finTick(){
+  var r=fin.getBoundingClientRect();
+  var p=1-(r.bottom-innerHeight)/(r.height-innerHeight||1);
+  f2.classList.toggle('vis',p>0.42);
+  f3.classList.toggle('vis',p>0.72);
+  requestAnimationFrame(finTick);
+}
+requestAnimationFrame(finTick);
+
+/* ---------- Act V: research constellation ---------- */
+var NODES=[
+  {id:0,x:390,y:36 ,l:'multimodal',  h:'Workshop paper, 2025', t:'Aligning visual and textual representations for clinical report generation.', tag:'PAPER'},
+  {id:1,x:96 ,y:150,l:'computer vision',h:'First-author, CVPR-style',t:'Self-supervised pretraining that reduced labelled-data requirements substantially.', tag:'PAPER'},
+  {id:2,x:684,y:150,l:'medical imaging',h:'Journal, 2026', t:'Volumetric segmentation validated against radiologist annotations.', tag:'PAPER'},
+  {id:3,x:214,y:258,l:'3d vision',    h:'Project', t:'Depth estimation and reconstruction from uncalibrated multi-view input.', tag:'PROJECT'},
+  {id:4,x:566,y:262,l:'uncertainty',  h:'Ongoing', t:'When should a model say "I do not know"? Calibration under distribution shift.', tag:'OPEN'},
+  {id:5,x:390,y:150,l:'representation',h:'The through-line',t:'Every node above connects here. It is the question the whole site is about.',tag:'CORE'},
+  {id:6,x:404,y:206,l:'efficiency',   h:'Project', t:'Distillation and pruning to run these models on hospital-grade hardware.', tag:'PROJECT'}
+];
+var EDGES=[[5,0],[5,1],[5,2],[5,3],[5,4],[1,3],[2,4],[0,2],[0,1],[5,6],[6,4]];
+var ge=document.getElementById('cedges'),gn=document.getElementById('cnodes'),cp=document.getElementById('cpanel');
+EDGES.forEach(function(e,i){
+  var A=NODES[e[0]],B=NODES[e[1]];
+  var ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+  ln.setAttribute('x1',A.x);ln.setAttribute('y1',A.y);ln.setAttribute('x2',B.x);ln.setAttribute('y2',B.y);
+  ln.setAttribute('class','cedge');ln.dataset.a=e[0];ln.dataset.b=e[1];ge.appendChild(ln);
+});
+NODES.forEach(function(n){
+  var g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.setAttribute('class','cn');g.dataset.id=n.id;
+  var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('cx',n.x);c.setAttribute('cy',n.y);c.setAttribute('r',n.id===5?7:5);
+  c.setAttribute('fill',n.id===5?'#ffc861':'#7286a3');
+  var tx=document.createElementNS('http://www.w3.org/2000/svg','text');
+  tx.setAttribute('x',n.x);tx.setAttribute('y',n.y-15);tx.setAttribute('text-anchor','middle');
+  tx.textContent=n.l;
+  var hit=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  hit.setAttribute('cx',n.x);hit.setAttribute('cy',n.y-6);hit.setAttribute('r',26);
+  hit.setAttribute('fill','transparent');hit.setAttribute('class','hit');
+  g.appendChild(c);g.appendChild(tx);g.appendChild(hit);gn.appendChild(g);
+  function show(){
+    document.querySelectorAll('.cn').forEach(function(o){o.classList.remove('sel');});
+    g.classList.add('sel');
+    document.querySelectorAll('.cedge').forEach(function(l){
+      l.classList.toggle('hot', +l.dataset.a===n.id || +l.dataset.b===n.id);
+    });
+    cp.innerHTML='<div class="ph">'+n.tag+' · '+n.l.toUpperCase()+'</div><h4>'+n.h+'</h4><p>'+n.t+
+      '</p><div class="lk"><s>PDF</s><s>CODE</s><s>BIBTEX</s></div>';
+  }
+  g.addEventListener('mouseenter',show);g.addEventListener('click',show);
+});
+cp.innerHTML='<div class="ph" style="color:var(--faint)">—</div><h4 style="color:var(--dim);font-weight:300">'+
+  '<span data-vi>Chọn một node</span><span data-en>Select a node</span></h4>'+
+  '<p><span data-vi>Chi tiết publication chỉ hiện khi bạn chạm vào. Cấu trúc được nhìn thấy trước, nội dung đến sau.</span>'+
+  '<span data-en>Publication details appear only on contact. Structure is seen first; content follows.</span></p>';
+
+/* ---------- language ---------- */
+var lb=document.getElementById('langBtn'),H=document.documentElement;
+lb.addEventListener('click',function(){
+  var nx=H.getAttribute('lang')==='en'?'vi':'en';
+  H.setAttribute('lang',nx);
+  lb.innerHTML='[ <i>'+nx.toUpperCase()+'</i> / '+(nx==='en'?'VI':'EN')+' ]';
+});
+})();
+</script>
+</body>
+</html>

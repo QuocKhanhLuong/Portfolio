@@ -1,0 +1,158 @@
+import { ACTS } from '@/content/acts';
+import { SCENE_STATES, type ActId, type SceneState } from '@/content/types';
+
+/**
+ * The timeline is the single source of pacing. Scroll produces one scalar in
+ * [0, 1]; everything downstream — scene state, camera, palette, motion scale,
+ * type treatment — is a pure function of it. Nothing else may read scroll.
+ */
+
+export interface CameraKey {
+  yaw: number;
+  pitch: number;
+  distance: number;
+  /** Screen-space offset of the motif, so it never sits under the copy. */
+  offset: [number, number];
+  /**
+   * How much the camera is allowed to move in three dimensions, 0–1. Held near
+   * zero until Act 03 on purpose: depth has to arrive as an event.
+   */
+  dimensionality: number;
+  /** Ambient orbital drift. */
+  drift: number;
+}
+
+export interface PaletteKey {
+  /** Base particle colour, linear 0–1 RGB. */
+  core: [number, number, number];
+  /** Colour of the brightest particles. */
+  accent: [number, number, number];
+  /** Overall field opacity — how loud this act is. */
+  density: number;
+}
+
+const rgb = (hex: string): [number, number, number] => [
+  parseInt(hex.slice(1, 3), 16) / 255,
+  parseInt(hex.slice(3, 5), 16) / 255,
+  parseInt(hex.slice(5, 7), 16) / 255,
+];
+
+/** One axis: cold → warm → ash. Ember is spent in exactly one act. */
+export const COLOR = {
+  ink: rgb('#05070C'),
+  frost: rgb('#8FA6C4'),
+  slate: rgb('#4A5F7E'),
+  bone: rgb('#E8DCC8'),
+  ember: rgb('#C4632F'),
+  ash: rgb('#C9CFD8'),
+};
+
+interface ActKey {
+  camera: CameraKey;
+  palette: PaletteKey;
+  /** Time scale for drift, turbulence and transition speed. */
+  motion: number;
+}
+
+export const ACT_KEYS: Record<ActId, ActKey> = {
+  signal: {
+    camera: { yaw: 0, pitch: 0, distance: 4.2, offset: [0, -0.85], dimensionality: 0.05, drift: 0.02 },
+    palette: { core: COLOR.slate, accent: COLOR.frost, density: 0.42 },
+    motion: 0.35,
+  },
+  curiosity: {
+    camera: { yaw: 0.04, pitch: 0.02, distance: 3.6, offset: [-0.72, 0.08], dimensionality: 0.12, drift: 0.05 },
+    palette: { core: COLOR.slate, accent: COLOR.frost, density: 0.72 },
+    motion: 0.7,
+  },
+  representation: {
+    camera: { yaw: -0.12, pitch: 0.06, distance: 4.2, offset: [0.78, 0.04], dimensionality: 0.25, drift: 0.08 },
+    palette: { core: COLOR.slate, accent: COLOR.frost, density: 1.0 },
+    motion: 0.95,
+  },
+  depth: {
+    // The first act with real dimensionality. Everything before it was flat.
+    camera: { yaw: 0.42, pitch: 0.22, distance: 3.1, offset: [-0.55, 0.05], dimensionality: 1.0, drift: 0.35 },
+    palette: { core: COLOR.slate, accent: COLOR.frost, density: 0.92 },
+    motion: 1.15,
+  },
+  consequence: {
+    // The warm break. Slowest motion on the site.
+    camera: { yaw: 0.6, pitch: -0.14, distance: 2.9, offset: [0.8, -0.08], dimensionality: 0.85, drift: 0.12 },
+    palette: { core: COLOR.bone, accent: COLOR.ember, density: 0.86 },
+    motion: 0.4,
+  },
+  uncertainty: {
+    camera: { yaw: 0.2, pitch: 0.1, distance: 4.6, offset: [-0.5, 0.05], dimensionality: 0.7, drift: 0.5 },
+    palette: { core: COLOR.slate, accent: COLOR.ash, density: 0.66 },
+    motion: 0.8,
+  },
+  frontier: {
+    camera: { yaw: 0.1, pitch: 0.06, distance: 5.2, offset: [0, -0.22], dimensionality: 0.6, drift: 0.14 },
+    palette: { core: COLOR.slate, accent: COLOR.ash, density: 0.8 },
+    motion: 0.7,
+  },
+  return: {
+    camera: { yaw: 0.28, pitch: 0.14, distance: 9.6, offset: [0, 0], dimensionality: 0.35, drift: 0.06 },
+    palette: { core: COLOR.ash, accent: COLOR.ash, density: 0.5 },
+    motion: 0.2,
+  },
+};
+
+/** One weight unit of scroll, in viewport heights. */
+export const SCROLL_UNIT_VH = 110;
+
+export interface ActRange {
+  index: number;
+  id: ActId;
+  start: number;
+  end: number;
+  span: number;
+}
+
+const TOTAL_WEIGHT = ACTS.reduce((sum, a) => sum + a.weight, 0);
+
+export const ACT_RANGES: ActRange[] = (() => {
+  const ranges: ActRange[] = [];
+  let cursor = 0;
+  ACTS.forEach((act, index) => {
+    const span = act.weight / TOTAL_WEIGHT;
+    ranges.push({ index, id: act.id, start: cursor, end: cursor + span, span });
+    cursor += span;
+  });
+  return ranges;
+})();
+
+/** Total page height in viewport units. */
+export const TOTAL_VH = TOTAL_WEIGHT * SCROLL_UNIT_VH;
+
+/**
+ * Every scene state gets an anchor on the global progress axis: the point where
+ * that state is fully itself. Between anchors the field is in transition. Acts
+ * holding two states get two anchors inside their own span, which is why Act 01
+ * and Act 04 feel like they move through something rather than sit still.
+ */
+export interface StateAnchor {
+  state: SceneState;
+  /** Index into SCENE_STATES. */
+  stateIndex: number;
+  progress: number;
+}
+
+export const STATE_ANCHORS: StateAnchor[] = (() => {
+  const anchors: StateAnchor[] = [];
+  ACTS.forEach((act, i) => {
+    const range = ACT_RANGES[i];
+    act.states.forEach((state, k) => {
+      // Spread anchors inside the act, inset from the edges so transitions
+      // straddle act boundaries instead of snapping at them.
+      const t = act.states.length === 1 ? 0.42 : 0.24 + (k * 0.56) / (act.states.length - 1);
+      anchors.push({
+        state,
+        stateIndex: SCENE_STATES.indexOf(state),
+        progress: range.start + range.span * t,
+      });
+    });
+  });
+  return anchors;
+})();
