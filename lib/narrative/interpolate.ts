@@ -1,6 +1,13 @@
 import { ACTS } from '@/content/acts';
 import type { Act, SceneState } from '@/content/types';
-import { ACT_KEYS, ACT_RANGES, STATE_ANCHORS, type CameraKey, type PaletteKey } from './timeline';
+import {
+  ACT_KEYS,
+  ACT_RANGES,
+  STATE_ANCHORS,
+  type CameraKey,
+  type InteractionKey,
+  type PaletteKey,
+} from './timeline';
 
 export const clamp = (v: number, lo = 0, hi = 1) => (v < lo ? lo : v > hi ? hi : v);
 
@@ -40,6 +47,7 @@ export interface NarrativeFrame {
   blend: number;
   camera: CameraKey;
   palette: PaletteKey;
+  interaction: InteractionKey;
   motion: number;
   /**
    * How degraded the act headline is, 0 (clean serif) to 1 (Redaction).
@@ -94,6 +102,7 @@ const scratch: NarrativeFrame = {
   blend: 0,
   camera: { yaw: 0, pitch: 0, distance: 4, offset: [0, 0], dimensionality: 0, drift: 0 },
   palette: { core: [0, 0, 0], accent: [0, 0, 0], density: 1 },
+  interaction: { pointerSign: 1, pointerStrength: 0, turbulence: 0, arc: 0, spread: 0.5 },
   motion: 1,
   redaction: 0,
 };
@@ -138,6 +147,12 @@ export function sample(progress: number, out: NarrativeFrame = scratch): Narrati
   out.palette.accent[1] = accent[1];
   out.palette.accent[2] = accent[2];
   out.palette.density = lerp(KA.palette.density, KB.palette.density, kt);
+
+  out.interaction.pointerSign = lerp(KA.interaction.pointerSign, KB.interaction.pointerSign, kt);
+  out.interaction.pointerStrength = lerp(KA.interaction.pointerStrength, KB.interaction.pointerStrength, kt);
+  out.interaction.turbulence = lerp(KA.interaction.turbulence, KB.interaction.turbulence, kt);
+  out.interaction.arc = lerp(KA.interaction.arc, KB.interaction.arc, kt);
+  out.interaction.spread = lerp(KA.interaction.spread, KB.interaction.spread, kt);
 
   out.motion = lerp(KA.motion, KB.motion, kt);
   out.redaction = redactionAt(out.act, out.actProgress);

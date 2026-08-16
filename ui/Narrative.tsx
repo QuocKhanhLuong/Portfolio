@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { ACTS, CONTACT } from '@/content/acts';
 import { startNarrativeDriver } from '@/lib/narrative/driver';
 import { useNarrative } from '@/lib/narrative/store';
+import { Stage } from '@/scene/Stage';
 import { ActSection } from './ActSection';
 import { Identity, LanguageToggle, Rail, ScrollCue, Spine } from './Chrome';
 import styles from './overlay.module.css';
@@ -39,6 +40,7 @@ export function Narrative() {
 
   return (
     <>
+      <Stage />
       <Identity subtitle={SUBTITLE[locale]} />
       <LanguageToggle />
       <Rail />

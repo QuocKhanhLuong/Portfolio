@@ -35,11 +35,14 @@ interface NarrativeStore {
   locale: Locale;
   reducedMotion: boolean;
   tier: PerfTier;
+  /** Fraction of the particle buffer currently drawn, trimmed under load. */
+  activeFraction: number;
   webglFailed: boolean;
   setActIndex: (i: number) => void;
   setLocale: (l: Locale) => void;
   setReducedMotion: (v: boolean) => void;
   setTier: (t: PerfTier) => void;
+  setActiveFraction: (v: number) => void;
   setWebglFailed: (v: boolean) => void;
 }
 
@@ -48,10 +51,13 @@ export const useNarrative = create<NarrativeStore>((set) => ({
   locale: 'en',
   reducedMotion: false,
   tier: 'mid',
+  activeFraction: 1,
   webglFailed: false,
   setActIndex: (i) => set((s) => (s.actIndex === i ? s : { actIndex: i })),
   setLocale: (locale) => set({ locale }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setTier: (tier) => set({ tier }),
+  setActiveFraction: (activeFraction) =>
+    set((s) => (Math.abs(s.activeFraction - activeFraction) < 0.02 ? s : { activeFraction })),
   setWebglFailed: (webglFailed) => set({ webglFailed }),
 }));

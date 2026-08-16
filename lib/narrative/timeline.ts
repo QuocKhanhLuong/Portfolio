@@ -47,11 +47,31 @@ export const COLOR = {
   ash: rgb('#C9CFD8'),
 };
 
+/**
+ * Per-act tuning of the transition engine and the pointer field. This is where
+ * interaction is given a reason: the opening signal pushes away from the
+ * cursor because it is not yet something you can touch, the research graph
+ * pulls toward it because it is asking to be looked at, and the medical act is
+ * almost inert because you do not poke a body.
+ */
+export interface InteractionKey {
+  /** +1 repels from the cursor, -1 attracts toward it. */
+  pointerSign: number;
+  pointerStrength: number;
+  /** Ambient positional noise. */
+  turbulence: number;
+  /** How much transition paths bow away from a straight line. */
+  arc: number;
+  /** Width of the per-particle transition stagger, 0–0.9. */
+  spread: number;
+}
+
 interface ActKey {
   camera: CameraKey;
   palette: PaletteKey;
   /** Time scale for drift, turbulence and transition speed. */
   motion: number;
+  interaction: InteractionKey;
 }
 
 export const ACT_KEYS: Record<ActId, ActKey> = {
@@ -59,43 +79,51 @@ export const ACT_KEYS: Record<ActId, ActKey> = {
     camera: { yaw: 0, pitch: 0, distance: 4.2, offset: [0, -0.85], dimensionality: 0.05, drift: 0.02 },
     palette: { core: COLOR.slate, accent: COLOR.frost, density: 0.42 },
     motion: 0.35,
+    interaction: { pointerSign: 1, pointerStrength: 0.1, turbulence: 0.004, arc: 0.18, spread: 0.55 },
   },
   curiosity: {
     camera: { yaw: 0.04, pitch: 0.02, distance: 3.6, offset: [-0.72, 0.08], dimensionality: 0.12, drift: 0.05 },
     palette: { core: COLOR.slate, accent: COLOR.frost, density: 0.72 },
     motion: 0.7,
+    interaction: { pointerSign: 1, pointerStrength: 0.07, turbulence: 0.003, arc: 0.14, spread: 0.5 },
   },
   representation: {
     camera: { yaw: -0.12, pitch: 0.06, distance: 4.2, offset: [0.78, 0.04], dimensionality: 0.25, drift: 0.08 },
     palette: { core: COLOR.slate, accent: COLOR.frost, density: 1.0 },
     motion: 0.95,
+    interaction: { pointerSign: 1, pointerStrength: 0.06, turbulence: 0.004, arc: 0.22, spread: 0.62 },
   },
   depth: {
     // The first act with real dimensionality. Everything before it was flat.
     camera: { yaw: 0.42, pitch: 0.22, distance: 3.1, offset: [-0.55, 0.05], dimensionality: 1.0, drift: 0.35 },
     palette: { core: COLOR.slate, accent: COLOR.frost, density: 0.92 },
     motion: 1.15,
+    interaction: { pointerSign: -0.4, pointerStrength: 0.09, turbulence: 0.006, arc: 0.16, spread: 0.45 },
   },
   consequence: {
     // The warm break. Slowest motion on the site.
     camera: { yaw: 0.6, pitch: -0.14, distance: 2.9, offset: [0.8, -0.08], dimensionality: 0.85, drift: 0.12 },
     palette: { core: COLOR.bone, accent: COLOR.ember, density: 0.86 },
     motion: 0.4,
+    interaction: { pointerSign: -0.15, pointerStrength: 0.035, turbulence: 0.002, arc: 0.1, spread: 0.35 },
   },
   uncertainty: {
     camera: { yaw: 0.2, pitch: 0.1, distance: 4.6, offset: [-0.5, 0.05], dimensionality: 0.7, drift: 0.5 },
     palette: { core: COLOR.slate, accent: COLOR.ash, density: 0.66 },
     motion: 0.8,
+    interaction: { pointerSign: 1, pointerStrength: 0.12, turbulence: 0.012, arc: 0.3, spread: 0.7 },
   },
   frontier: {
     camera: { yaw: 0.1, pitch: 0.06, distance: 5.2, offset: [0, -0.22], dimensionality: 0.6, drift: 0.14 },
     palette: { core: COLOR.slate, accent: COLOR.ash, density: 0.8 },
     motion: 0.7,
+    interaction: { pointerSign: -1, pointerStrength: 0.11, turbulence: 0.004, arc: 0.12, spread: 0.4 },
   },
   return: {
     camera: { yaw: 0.28, pitch: 0.14, distance: 9.6, offset: [0, 0], dimensionality: 0.35, drift: 0.06 },
     palette: { core: COLOR.ash, accent: COLOR.ash, density: 0.5 },
     motion: 0.2,
+    interaction: { pointerSign: 0.2, pointerStrength: 0.03, turbulence: 0.001, arc: 0.2, spread: 0.8 },
   },
 };
 
