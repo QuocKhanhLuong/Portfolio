@@ -25,12 +25,45 @@
   gap: 24px;
   grid-template-columns: minmax(12rem, 1fr) auto minmax(5rem, 1fr);
   left: 0;
-  padding: clamp(18px, 2.4vw, 32px) var(--gutter);
+  padding: clamp(24px, 2.4vw, 32px) var(--gutter);
   pointer-events: none;
   position: fixed;
   right: 0;
   top: 0;
   z-index: 40;
+  transition:
+    background 500ms var(--ease-out),
+    border-color 500ms var(--ease-out),
+    box-shadow 500ms var(--ease-out),
+    left 500ms var(--ease-out),
+    padding 500ms var(--ease-out),
+    right 500ms var(--ease-out),
+    top 500ms var(--ease-out);
+}
+
+.siteHeaderScrolled {
+  background: rgba(244, 241, 234, 0.86);
+  border: 1px solid rgba(215, 210, 199, 0.82);
+  border-radius: 18px;
+  box-shadow: 0 12px 36px rgba(27, 28, 26, 0.08);
+  left: var(--gutter);
+  padding-bottom: 14px;
+  padding-left: clamp(18px, 2.4vw, 32px);
+  padding-right: clamp(18px, 2.4vw, 32px);
+  padding-top: 14px;
+  right: var(--gutter);
+  top: 16px;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+.siteHeaderMenuOpen {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  left: 0;
+  right: 0;
+  top: 0;
 }
 
 .brand,
@@ -80,6 +113,7 @@
 
 .primaryNav a,
 .headerContact {
+  position: relative;
   text-decoration: none;
   transition: color 220ms var(--ease-out);
 }
@@ -89,6 +123,186 @@
 .headerContact:hover,
 .headerContact:focus-visible {
   color: var(--accent-warm);
+}
+
+.primaryNav a::after {
+  background: var(--accent-warm);
+  bottom: -7px;
+  content: '';
+  height: 1px;
+  left: 0;
+  position: absolute;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 300ms var(--ease-out);
+  width: 100%;
+}
+
+.primaryNav a:hover::after,
+.primaryNav a:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.menuToggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+  display: none;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  gap: 10px;
+  letter-spacing: 0.12em;
+  padding: 8px 0 8px 8px;
+  text-transform: uppercase;
+}
+
+.menuToggleLabel {
+  min-width: 2.8rem;
+  text-align: right;
+}
+
+.menuGlyph {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 20px;
+}
+
+.menuGlyph span {
+  background: currentColor;
+  display: block;
+  height: 1px;
+  transform-origin: center;
+  transition: transform 300ms var(--ease-out), width 300ms var(--ease-out);
+  width: 20px;
+}
+
+.menuGlyph span:last-child {
+  margin-left: 5px;
+  width: 15px;
+}
+
+.menuGlyphOpen span:first-child {
+  transform: translateY(3px) rotate(45deg);
+}
+
+.menuGlyphOpen span:last-child {
+  margin-left: 0;
+  transform: translateY(-3px) rotate(-45deg);
+  width: 20px;
+}
+
+.mobileMenu {
+  background: rgba(244, 241, 234, 0.98);
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  transition: opacity 500ms var(--ease-out), visibility 500ms var(--ease-out);
+  visibility: hidden;
+  z-index: -1;
+}
+
+.mobileMenuOpen {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.mobileMenuInner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin: 0 auto;
+  max-width: var(--content-max);
+  padding: clamp(112px, 16vw, 160px) var(--gutter) var(--gutter);
+}
+
+.mobileMenuNav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: clamp(20px, 4vw, 36px);
+  justify-content: center;
+}
+
+.mobileMenuLink {
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: clamp(2.75rem, 9vw, 5rem);
+  letter-spacing: -0.035em;
+  line-height: 0.94;
+  opacity: 0;
+  text-decoration: none;
+  transform: translateY(20px);
+  transition:
+    color 300ms var(--ease-out),
+    opacity 500ms var(--ease-out),
+    transform 500ms var(--ease-out);
+}
+
+.mobileMenuOpen .mobileMenuLink {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobileMenuLink:hover,
+.mobileMenuLink:focus-visible {
+  color: var(--accent-warm);
+}
+
+.mobileMenuActions {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  padding-top: 24px;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 500ms 300ms var(--ease-out), transform 500ms 300ms var(--ease-out);
+}
+
+.mobileMenuOpen .mobileMenuActions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobileMenuQuietAction,
+.mobileMenuPrimaryAction {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.mobileMenuQuietAction {
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  padding-bottom: 6px;
+  transition: border-color 220ms var(--ease-out), color 220ms var(--ease-out);
+}
+
+.mobileMenuPrimaryAction {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 12px 16px;
+  transition: background 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+
+.mobileMenuQuietAction:hover,
+.mobileMenuQuietAction:focus-visible {
+  border-color: var(--accent-warm);
+  color: var(--accent-warm);
+}
+
+.mobileMenuPrimaryAction:hover,
+.mobileMenuPrimaryAction:focus-visible {
+  background: var(--accent-warm);
+  transform: translateY(-2px);
 }
 
 .headerContact {
@@ -142,7 +356,7 @@
 .section {
   isolation: isolate;
   position: relative;
-  padding: clamp(88px, 12vw, 180px) var(--gutter);
+  padding: var(--section-space) var(--gutter);
 }
 
 .section::before {
@@ -156,7 +370,7 @@
 }
 
 .section + .section {
-  padding-top: clamp(104px, 13vw, 188px);
+  padding-top: var(--section-space);
 }
 
 .sectionInner,
@@ -171,8 +385,8 @@
   align-items: center;
   display: flex;
   min-height: 100svh;
-  padding-bottom: clamp(90px, 12vw, 180px);
-  padding-top: clamp(120px, 16vw, 220px);
+  padding-bottom: var(--section-space);
+  padding-top: clamp(128px, 14vw, 192px);
 }
 
 .hero::before {
@@ -181,7 +395,7 @@
 
 .heroGrid {
   display: grid;
-  gap: clamp(48px, 10vw, 160px);
+  gap: var(--layout-gap);
   grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.34fr);
 }
 
@@ -199,7 +413,7 @@
 .positioning {
   color: var(--ink-soft);
   font-family: var(--serif);
-  font-size: clamp(1.35rem, 2.4vw, 2.35rem);
+  font-size: clamp(1.25rem, 1.8vw, 1.5rem);
   line-height: 1.25;
   margin: clamp(28px, 4vw, 54px) 0 0;
   max-width: 34rem;
@@ -233,6 +447,31 @@
 .primaryAction:focus-visible {
   background: var(--accent-warm);
   transform: translateY(-2px);
+}
+
+.primaryAction > span,
+.headerContact > span,
+.rowLink > span,
+.contactLinks a > span,
+.mobileMenuQuietAction > span,
+.mobileMenuPrimaryAction > span {
+  display: inline-block;
+  transition: transform 300ms var(--ease-out);
+}
+
+.primaryAction:hover > span,
+.primaryAction:focus-visible > span,
+.headerContact:hover > span,
+.headerContact:focus-visible > span,
+.rowLink:hover > span,
+.rowLink:focus-visible > span,
+.contactLinks a:hover > span,
+.contactLinks a:focus-visible > span,
+.mobileMenuQuietAction:hover > span,
+.mobileMenuQuietAction:focus-visible > span,
+.mobileMenuPrimaryAction:hover > span,
+.mobileMenuPrimaryAction:focus-visible > span {
+  transform: translate(3px, -3px);
 }
 
 .quietAction {
@@ -275,21 +514,63 @@
   width: 24px;
 }
 
+.heroVisual {
+  height: clamp(8rem, 15vw, 13rem);
+  margin-bottom: clamp(24px, 4vw, 42px);
+  max-width: 15rem;
+  width: 100%;
+}
+
+.canvasVisual {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
 .sectionHeader {
   background: linear-gradient(180deg, var(--paper) 0%, var(--paper) 72%, rgba(244, 241, 234, 0) 100%);
   display: grid;
   gap: 32px;
   grid-template-columns: minmax(9rem, 0.26fr) minmax(0, 1fr);
-  margin-bottom: clamp(48px, 8vw, 112px);
+  margin-bottom: clamp(48px, 8vw, 96px);
   padding: 12px 0 28px;
   position: sticky;
-  top: clamp(5.2rem, 8vw, 7rem);
+  top: var(--chrome-offset);
   z-index: 2;
+}
+
+.sectionMarkerBlock {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .sectionMarker {
   color: var(--muted);
   margin: 0;
+}
+
+/* An actual rule, so the "line" reveal scales a line and not letterforms. */
+.sectionRule {
+  background: var(--line);
+  display: block;
+  height: 1px;
+  transform-origin: left center;
+  width: min(100%, 9rem);
+}
+
+/* Masked line reveals: one clip per visual line, with a little room for
+   descenders so the mask never crops the type it is revealing. */
+.lineMask {
+  display: block;
+  margin-bottom: -0.16em;
+  overflow: hidden;
+  padding-bottom: 0.16em;
+}
+
+.lineInner {
+  display: block;
 }
 
 .sectionMarker span {
@@ -299,7 +580,7 @@
 .sectionTitle {
   color: var(--ink);
   font-family: var(--serif);
-  font-size: clamp(2.1rem, 4.5vw, 5rem);
+  font-size: clamp(2.25rem, 5vw, 4.5rem);
   font-weight: 400;
   letter-spacing: -0.035em;
   line-height: 1.02;
@@ -312,6 +593,11 @@
   color: var(--ink-soft);
   margin: 24px 0 0;
   max-width: 32rem;
+}
+
+/* Block, so the sticky handoff can actually transform it. */
+.sectionDescription > span {
+  display: block;
 }
 
 .sceneFocus {
@@ -327,7 +613,7 @@
 
 .aboutGrid {
   display: grid;
-  gap: clamp(48px, 10vw, 160px);
+  gap: var(--layout-gap);
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.7fr);
   margin-left: 26%;
 }
@@ -341,20 +627,22 @@
   border-top: 1px solid var(--line);
 }
 
+/* The horizontal shift on hover is a GSAP tween on this element (see
+   SceneFocus) so it starts on the same event as the scene focus. Colour and
+   background stay in CSS; nothing writes the transform from two places. */
 .domainItem {
   border-bottom: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: 5px;
   padding: 16px 0;
-  transition: color 220ms var(--ease-out), transform 320ms var(--ease-out), background 220ms var(--ease-out);
+  transition: color 220ms var(--ease-out), background 220ms var(--ease-out);
 }
 
 .domainItem:hover,
 .domainItem:focus-visible {
   background: rgba(236, 232, 223, 0.42);
   color: var(--accent-warm);
-  transform: translateX(8px);
 }
 
 .domainName,
@@ -400,7 +688,7 @@
   grid-template-columns: minmax(2rem, 0.15fr) minmax(0, 1fr) minmax(9rem, 0.34fr);
   padding: 28px 0 32px;
   position: relative;
-  transition: background 220ms var(--ease-out), transform 320ms var(--ease-out), box-shadow 220ms var(--ease-out);
+  transition: background 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
   will-change: transform;
 }
 
@@ -410,7 +698,6 @@
 .researchRow:focus-visible {
   background: rgba(236, 232, 223, 0.72);
   box-shadow: inset 3px 0 0 var(--accent-warm);
-  transform: translateX(10px);
 }
 
 .rowIndex,
@@ -502,6 +789,21 @@
   min-height: 100%;
 }
 
+.rowVisual {
+  color: var(--accent-cool);
+  height: clamp(4.5rem, 7vw, 6rem);
+  max-width: 11rem;
+  opacity: 0.78;
+  width: 100%;
+}
+
+.researchDiagram {
+  display: block;
+  height: 100%;
+  overflow: visible;
+  width: 100%;
+}
+
 .sceneLabel {
   color: var(--research);
 }
@@ -530,6 +832,66 @@
   text-transform: none;
 }
 
+.marqueeBand {
+  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  margin-left: calc(50% - 50vw);
+  margin-top: clamp(56px, 8vw, 96px);
+  overflow: hidden;
+  padding: 18px 0;
+  width: 100vw;
+}
+
+.marqueeTrack {
+  animation: portfolioMarquee 30s linear infinite;
+  display: flex;
+  width: max-content;
+}
+
+.marqueeSet {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: clamp(24px, 4vw, 64px);
+  padding-right: clamp(24px, 4vw, 64px);
+}
+
+.marqueeItem {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.marqueeItem::before {
+  color: var(--accent-warm);
+  content: '·';
+  margin-right: 0.8em;
+}
+
+@keyframes portfolioMarquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marqueeTrack {
+    animation: none;
+  }
+
+  .researchDiagram animate,
+  .researchDiagram animateMotion {
+    display: none;
+  }
+}
+
 /* ── experience and capabilities ────────────────────────────────────────── */
 
 .experienceRow {
@@ -553,7 +915,7 @@
 }
 
 .capabilityBlock {
-  margin: clamp(80px, 12vw, 160px) 0 0 26%;
+  margin: clamp(64px, 10vw, 128px) 0 0 26%;
 }
 
 .subsectionMarker {
@@ -628,7 +990,56 @@
 }
 
 .contactInner {
+  align-items: center;
+  display: grid;
+  gap: var(--layout-gap);
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.42fr);
   max-width: 66rem;
+}
+
+.contactCopy {
+  min-width: 0;
+}
+
+.contactVisual {
+  color: var(--accent-warm);
+  height: clamp(12rem, 22vw, 18rem);
+  justify-self: end;
+  max-width: 18rem;
+  width: 100%;
+}
+
+.contactWave {
+  height: clamp(72px, 10vw, 128px);
+  margin: clamp(56px, 8vw, 96px) 0 0 calc(50% - 50vw);
+  overflow: hidden;
+  pointer-events: none;
+  width: 100vw;
+}
+
+.spotlightPanel {
+  isolation: isolate;
+  position: relative;
+}
+
+.spotlightPanel::before {
+  background: radial-gradient(
+    420px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    rgba(184, 101, 70, 0.12),
+    transparent 62%
+  );
+  content: '';
+  inset: -24px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 300ms var(--ease-out);
+  z-index: -1;
+}
+
+.spotlightPanel:hover::before,
+.spotlightPanel:focus-within::before {
+  opacity: 1;
 }
 
 .contactInner .headline {
@@ -694,15 +1105,7 @@
   text-transform: uppercase;
 }
 
-@media (max-width: 920px) {
-  .siteHeader {
-    grid-template-columns: 1fr auto;
-  }
-
-  .primaryNav {
-    display: none;
-  }
-
+@media (max-width: 1023px) {
   .heroGrid,
   .aboutGrid {
     gap: 56px;
@@ -717,9 +1120,44 @@
   .capabilityBlock {
     margin-left: 0;
   }
+
+  .projectRow,
+  .researchRow,
+  .experienceRow {
+    gap: 12px;
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+
+  .rowAside {
+    grid-column: 2;
+    min-height: auto;
+    padding-top: 8px;
+  }
+
+  .capabilityGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 767px) {
+  .siteHeader {
+    grid-template-columns: 1fr auto;
+  }
+
+  .primaryNav,
+  .headerContact {
+    display: none;
+  }
+
+  .menuToggle {
+    display: inline-flex;
+  }
+
+  .siteHeaderScrolled {
+    left: 12px;
+    right: 12px;
+  }
+
   .brandRole {
     display: none;
   }
@@ -740,13 +1178,31 @@
   }
 
   .section {
-    padding-bottom: 88px;
-    padding-top: 88px;
+    padding-bottom: var(--section-space);
+    padding-top: var(--section-space);
   }
 
   .hero {
     min-height: 92svh;
-    padding-top: 132px;
+    padding-top: clamp(112px, 22vw, 132px);
+  }
+
+  .heroVisual,
+  .contactVisual {
+    display: none;
+  }
+
+  .contactInner {
+    display: block;
+  }
+
+  .contactWave {
+    height: 72px;
+    margin-top: 56px;
+  }
+
+  .marqueeBand {
+    margin-top: 56px;
   }
 
   .sectionHeader {
@@ -757,19 +1213,6 @@
 
   .sectionMarker {
     margin-bottom: 22px;
-  }
-
-  .projectRow,
-  .researchRow,
-  .experienceRow {
-    gap: 12px;
-    grid-template-columns: 2rem minmax(0, 1fr);
-  }
-
-  .rowAside {
-    grid-column: 2;
-    min-height: auto;
-    padding-top: 8px;
   }
 
   .capabilityGrid {

@@ -1,22 +1,25 @@
 'use client';
 
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import { currentActIndex } from './interpolate';
+import { measureSceneAnchors, currentSceneIndex } from './sceneMap';
 import { scrollState, useNarrative } from './store';
 import { emitFrame } from './ticker';
 
 /**
  * The one place in the application that listens to scroll.
  *
- * It owns Lenis, the smoothing, the velocity estimate and the pointer, writes
- * them into `scrollState`, and pushes the act index into the store only when it
- * actually changes. Components read `scrollState` inside their own frame loops.
- * If you find yourself adding a scroll listener somewhere else, add it here
- * instead.
+ * Three clocks used to exist here: Lenis had its own rAF, ScrollTrigger updated
+ * off the native scroll event, and the scene ran a second exponential smoother
+ * on top of Lenis' already-smoothed position. The foreground and the background
+ * therefore disagreed about where the page was, by an amount that varied with
+ * frame rate. There is now one clock — gsap's ticker — which drives Lenis,
+ * which in turn drives ScrollTrigger. The scene reads Lenis' smoothed position
+ * directly and does not smooth it again.
  */
 
 let lenis: Lenis | null = null;
-let rafId = 0;
 let disposed = true;
 
 export interface DriverOptions {
@@ -25,50 +28,65 @@ export interface DriverOptions {
 
 export function startNarrativeDriver({ reducedMotion }: DriverOptions): () => void {
   disposed = false;
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Cached, because reading scrollHeight every frame forces a layout. It is
+  // refreshed from the same event ScrollTrigger uses to remeasure everything.
+  let maxScroll = 1;
+  const measureExtent = () => {
+    maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+  };
+  const nativeProgress = () => window.scrollY / maxScroll;
 
   if (!reducedMotion) {
     lenis = new Lenis({
-      // Long, heavy damping: the page should feel like it has mass.
+      // Long, heavy damping: the page should feel like it has mass. This is the
+      // only smoothing applied to scroll anywhere in the app.
       lerp: 0.075,
       wheelMultiplier: 0.9,
       touchMultiplier: 1.4,
       syncTouch: true,
     });
+    // ScrollTrigger must be told the position Lenis is animating to, not the
+    // one the browser reports, or every scrubbed tween trails the page.
+    lenis.on('scroll', ScrollTrigger.update);
   }
 
-  let lastTime = performance.now();
-  let lastProgress = 0;
-  const startTime = lastTime;
-
-  const readTarget = () => {
-    const max = document.documentElement.scrollHeight - window.innerHeight;
-    return max > 0 ? window.scrollY / max : 0;
+  const onRefresh = () => {
+    measureExtent();
+    measureSceneAnchors();
   };
+  ScrollTrigger.addEventListener('refresh', onRefresh);
 
-  const tick = (now: number) => {
+  let lastProgress = nativeProgress();
+  let startTime = -1;
+
+  const tick = (time: number, deltaMs: number) => {
     if (disposed) return;
-    lenis?.raf(now);
+    // gsap hands out seconds; Lenis wants milliseconds off the same clock.
+    lenis?.raf(time * 1000);
 
-    const dt = Math.min(0.1, (now - lastTime) / 1000) || 0.016;
-    lastTime = now;
+    const dt = Math.min(0.1, deltaMs / 1000) || 0.016;
+    if (startTime < 0) startTime = time;
 
-    scrollState.target = readTarget();
-
-    // Lenis already smooths the document scroll; this second, gentler pass
-    // decouples the scene from any residual step in the reported position.
-    const ease = reducedMotion ? 1 : 1 - Math.pow(0.0016, dt);
-    scrollState.progress += (scrollState.target - scrollState.progress) * ease;
+    const target = nativeProgress();
+    scrollState.target = target;
+    // Lenis already owns the smoothing. Taking its animated position keeps the
+    // field, the camera and every ScrollTrigger on the same value.
+    scrollState.progress = lenis ? (Number.isFinite(lenis.progress) ? lenis.progress : target) : target;
 
     const instantaneous = (scrollState.progress - lastProgress) / dt;
     lastProgress = scrollState.progress;
     // Velocity is itself smoothed, otherwise a single wheel notch spikes it.
     scrollState.velocity += (instantaneous - scrollState.velocity) * Math.min(1, dt * 8);
 
-    scrollState.time = (now - startTime) / 1000;
+    scrollState.time = time - startTime;
 
-    // Pointer influence decays whenever the pointer is not moving, so a parked
-    // cursor stops deforming the field.
-    scrollState.pointerStrength *= Math.pow(0.35, dt);
+    // The cursor is an instrument, not a mouse trail: it stays engaged while it
+    // is over the page and only releases when it leaves.
+    const pointerEase = reducedMotion ? 1 : 1 - Math.pow(0.004, dt);
+    scrollState.pointerStrength +=
+      (scrollState.pointerTarget - scrollState.pointerStrength) * pointerEase;
 
     // Foreground project/research focus eases independently from scroll. It is
     // a temporary inspection request, never a second scene timeline.
@@ -76,38 +94,63 @@ export function startNarrativeDriver({ reducedMotion }: DriverOptions): () => vo
     scrollState.focusStrength +=
       (scrollState.focusTargetStrength - scrollState.focusStrength) * focusEase;
 
-    const act = currentActIndex(scrollState.progress);
-    if (act !== useNarrative.getState().actIndex) useNarrative.getState().setActIndex(act);
+    // Slice position for the medical states: the cursor cuts when it is on the
+    // page, and a slow sweep keeps the instrument alive when it is not.
+    const sweep = Math.sin(scrollState.time * 0.22) * 0.55;
+    scrollState.scanX +=
+      (scrollState.pointerX * 1.15 * scrollState.pointerStrength +
+        sweep * (1 - scrollState.pointerStrength) -
+        scrollState.scanX) *
+      Math.min(1, dt * 4);
+
+    const index = currentSceneIndex(scrollState.progress);
+    if (index !== useNarrative.getState().sceneIndex) useNarrative.getState().setSceneIndex(index);
 
     emitFrame();
-
-    rafId = requestAnimationFrame(tick);
   };
 
   const onPointerMove = (e: PointerEvent) => {
     scrollState.pointerX = (e.clientX / window.innerWidth) * 2 - 1;
     scrollState.pointerY = -((e.clientY / window.innerHeight) * 2 - 1);
-    scrollState.pointerStrength = 1;
+    scrollState.pointerTarget = e.pointerType === 'touch' ? 0.7 : 1;
   };
 
-  const onPointerLeave = () => {
-    scrollState.pointerStrength = 0;
+  const releasePointer = () => {
+    scrollState.pointerTarget = 0;
   };
 
   window.addEventListener('pointermove', onPointerMove, { passive: true });
-  window.addEventListener('pointerleave', onPointerLeave, { passive: true });
+  window.addEventListener('pointerleave', releasePointer, { passive: true });
+  window.addEventListener('pointercancel', releasePointer, { passive: true });
+  window.addEventListener('blur', releasePointer);
 
-  scrollState.progress = scrollState.target = readTarget();
+  measureExtent();
+  scrollState.progress = scrollState.target = nativeProgress();
   lastProgress = scrollState.progress;
-  rafId = requestAnimationFrame(tick);
+
+  measureSceneAnchors();
+  // The DOM entrance tweens have already been created by the time the driver
+  // starts; one refresh puts every trigger and every anchor on the same layout.
+  ScrollTrigger.refresh();
+
+  // lagSmoothing hides frame drops by lying about elapsed time, which desyncs
+  // the scene clock from the scroll position it is supposed to match.
+  gsap.ticker.lagSmoothing(0);
+  gsap.ticker.add(tick);
 
   return () => {
     disposed = true;
-    cancelAnimationFrame(rafId);
+    gsap.ticker.remove(tick);
+    gsap.ticker.lagSmoothing(500, 33);
+    ScrollTrigger.removeEventListener('refresh', onRefresh);
     window.removeEventListener('pointermove', onPointerMove);
-    window.removeEventListener('pointerleave', onPointerLeave);
+    window.removeEventListener('pointerleave', releasePointer);
+    window.removeEventListener('pointercancel', releasePointer);
+    window.removeEventListener('blur', releasePointer);
     lenis?.destroy();
     lenis = null;
+    scrollState.pointerTarget = 0;
+    scrollState.pointerStrength = 0;
     scrollState.focusTargetStrength = 0;
     scrollState.focusStrength = 0;
   };

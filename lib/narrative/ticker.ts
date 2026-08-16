@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { sample, type NarrativeFrame } from './interpolate';
+import { makeFrame, sample, type NarrativeFrame } from './interpolate';
 import { scrollState } from './store';
 
 /**
@@ -9,20 +9,24 @@ import { scrollState } from './store';
  *
  * The driver emits a sampled `NarrativeFrame` each tick; overlays subscribe and
  * write directly to refs. No component re-renders to animate. The WebGL layer
- * does not use this — R3F has its own loop and reads `scrollState` itself.
+ * runs on R3F's own loop but reads the same `liveFrame` object rather than
+ * re-sampling, so foreground and background can never describe different
+ * moments of the same scroll.
  */
 
 export type FrameListener = (frame: NarrativeFrame) => void;
 
 const listeners = new Set<FrameListener>();
 
-/** Owned by the driver; a stable object so subscribers may cache references. */
-export const liveFrame: NarrativeFrame = sample(0, {
-  ...sample(0),
-  camera: { yaw: 0, pitch: 0, distance: 4, offset: [0, 0], dimensionality: 0, drift: 0 },
-  palette: { core: [0, 0, 0], accent: [0, 0, 0], density: 1 },
-  interaction: { pointerStrength: 0, pointerRadius: 0.5, turbulence: 0, arc: 0, spread: 0.5 },
-});
+/**
+ * The narrative frame, sampled exactly once per tick.
+ *
+ * Every consumer — DOM overlays and all four R3F components — reads this same
+ * object. Each of them used to call `sample()` itself, which meant four
+ * evaluations of the same function per frame and, worse, four chances to
+ * disagree if any of them ran either side of a scroll update.
+ */
+export const liveFrame: NarrativeFrame = sample(0, makeFrame());
 
 export function emitFrame() {
   sample(scrollState.progress, liveFrame);

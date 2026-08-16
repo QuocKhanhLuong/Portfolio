@@ -30,7 +30,19 @@ const write = (out: Float32Array, i: number, x: number, y: number, z: number, b:
   out[k + 3] = b;
 };
 
-/** 00 — light before it is a scene: one raster line collapsed to a waveform. */
+/**
+ * 00 — light before it is a scene.
+ *
+ * The same waveform as before, but carried on a shell rather than a line. Light
+ * arrives from everywhere at once; it has not been collapsed onto an image
+ * plane yet, and `pixel` is where that collapse happens.
+ *
+ * It is a sphere for a compositional reason as well as a narrative one: the
+ * opening frame has to show a whole object. A 4.3 × 0.8 strip is 16% of the
+ * viewport in height, which reads as a smudge behind the copy no matter how the
+ * camera is placed. A shell fills the frame, and the network drawn across it is
+ * legible in the round.
+ */
 const signal: StateGenerator = ({ eye, count, rng }, out) => {
   for (let i = 0; i < count; i += 1) {
     const ex = eye.x[i];
@@ -38,9 +50,22 @@ const signal: StateGenerator = ({ eye, count, rng }, out) => {
     const u = (ex + 1) * 0.5;
     const wave =
       0.42 * Math.sin(u * 29) + 0.2 * Math.sin(u * 11 + 1.7) + 0.11 * Math.sin(u * 61) + 0.3 * (lum - 0.5);
-    // Most particles sit dark on the line; only the structured part is lit, so
-    // the opening reads as almost nothing.
-    write(out, i, ex * W, wave * 0.55 + (rng() - 0.5) * 0.03, (rng() - 0.5) * 0.05, 0.12 + lum * 0.3);
+
+    // Uniform directions, so the shell has no pole to give away its parameters.
+    const phi = Math.acos(2 * rng() - 1);
+    const theta = rng() * Math.PI * 2;
+    // The waveform survives as radial relief — the signal is still the subject,
+    // it simply has not been flattened into a picture.
+    const r = 1.32 + wave * 0.19 + (rng() - 0.5) * 0.03;
+
+    write(
+      out,
+      i,
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.cos(phi),
+      r * Math.sin(phi) * Math.sin(theta),
+      0.12 + lum * 0.34,
+    );
   }
 };
 
@@ -151,7 +176,9 @@ const human: StateGenerator = ({ eye, count, rng }, out) => {
 const NODE_INDEX = new Map(RESEARCH_NODES.map((n, i) => [n.id, i]));
 const NODE_POS = RESEARCH_NODES.map((n) => n.position);
 const EDGE_PAIRS = RESEARCH_EDGES.map((e) => [NODE_INDEX.get(e.from) ?? 0, NODE_INDEX.get(e.to) ?? 0] as const);
-const GRAPH_SCALE = 1.5;
+/** World scale of the research topology. The node tier reads this too, so the
+ *  semantic edges land on the particles that were packed onto them. */
+export const GRAPH_SCALE = 1.5;
 
 /** 06 — the questions, and what connects them. Nodes are crisp here. */
 const graph: StateGenerator = ({ count, rng }, out) => {

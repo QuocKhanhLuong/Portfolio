@@ -1,11 +1,11 @@
 'use client';
 
 import { useFrame, useThree } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
-import { SCENE_STATES } from '@/content/types';
-import { sample, type NarrativeFrame } from '@/lib/narrative/interpolate';
 import { scrollState, useNarrative } from '@/lib/narrative/store';
+import { liveFrame } from '@/lib/narrative/ticker';
+import { SCENE_INDEX, sceneClock, sceneWeights } from './sceneFrame';
 
 /**
  * The camera is a function of narrative progress and nothing else.
@@ -18,34 +18,39 @@ export function CameraRig() {
   const { camera } = useThree();
   const reducedMotion = useNarrative((s) => s.reducedMotion);
 
-  const frame = useRef<NarrativeFrame>(sample(0)).current;
   const target = useMemo(() => new THREE.Vector3(), []);
   const desired = useMemo(() => new THREE.Vector3(), []);
-  const time = useRef(0);
 
   useFrame((_, delta) => {
-    sample(scrollState.progress, frame);
-    time.current += delta * frame.motion;
-
+    const frame = liveFrame;
     const { camera: key } = frame;
     const dim = key.dimensionality;
-    const baseState = THREE.MathUtils.lerp(frame.stateAIndex, frame.stateBIndex, frame.blend);
-    const effectiveState = THREE.MathUtils.lerp(baseState, scrollState.focusState, scrollState.focusStrength);
-    const cloudInspection = stateWeight(effectiveState, SCENE_STATES.indexOf('cloud'), 1.15);
-    const graphInspection = stateWeight(effectiveState, SCENE_STATES.indexOf('graph'), 1.25);
-    const constellationDrift = stateWeight(effectiveState, SCENE_STATES.indexOf('constellation'), 1.1);
+
+    // Presence, read from the shared per-frame weights. Deriving an "effective
+    // state" by interpolating ids meant a focused cloud next to the graph
+    // landed on the medical state and the camera moved as though it were
+    // inspecting a body.
+    const cloudInspection = sceneWeights[SCENE_INDEX.cloud];
+    const graphInspection = sceneWeights[SCENE_INDEX.graph];
+    const constellationDrift = sceneWeights[SCENE_INDEX.constellation];
 
     // Depth and graph states give the cursor a little more room to inspect the
     // field. Flat states stay nearly still so the foreground remains primary.
     const pointerYaw = reducedMotion
       ? 0
-      : scrollState.pointerX * (0.045 + cloudInspection * 0.095 + graphInspection * 0.02) * scrollState.pointerStrength;
+      : scrollState.pointerX *
+        (0.045 + cloudInspection * 0.095 + graphInspection * 0.02) *
+        scrollState.pointerStrength;
     const pointerPitch = reducedMotion
       ? 0
-      : -scrollState.pointerY * (0.03 + cloudInspection * 0.075 + graphInspection * 0.018) * scrollState.pointerStrength;
+      : -scrollState.pointerY *
+        (0.03 + cloudInspection * 0.075 + graphInspection * 0.018) *
+        scrollState.pointerStrength;
     const drift = reducedMotion
       ? 0
-      : Math.sin(time.current * (0.2 - constellationDrift * 0.08)) * key.drift * (0.5 + graphInspection * 0.18);
+      : Math.sin(sceneClock.time * (0.2 - constellationDrift * 0.08)) *
+        key.drift *
+        (0.5 + graphInspection * 0.18);
 
     // Parallax and drift are scaled by dimensionality: flat states stay legible,
     // while depth states acknowledge the cursor with restrained parallax.
@@ -70,9 +75,4 @@ export function CameraRig() {
   });
 
   return null;
-}
-
-function stateWeight(value: number, center: number, radius: number) {
-  const t = THREE.MathUtils.clamp(Math.abs(value - center) / radius, 0, 1);
-  return 1 - t * t * (3 - 2 * t);
 }

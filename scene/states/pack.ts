@@ -28,6 +28,15 @@ export interface PackedStates {
   stagger: Float32Array;
   /** Per-particle random seed for arc direction and drift. */
   seed: Float32Array;
+  /**
+   * Bounding radius of each state, measured not assumed.
+   *
+   * States differ in size by a factor of five — a flat image plane is nothing
+   * like the constellation — so a single camera distance can only ever frame
+   * one of them. The scene divides by this to put every state on screen at a
+   * chosen fraction of the viewport instead.
+   */
+  radius: Float32Array;
 }
 
 export function packStates(count: number): PackedStates {
@@ -53,6 +62,20 @@ export function packStates(count: number): PackedStates {
       GENERATORS[state](ctx, buffer);
     }
     buffers.push(buffer);
+  });
+
+  // Measured from the 98th percentile rather than the true maximum: a handful
+  // of far outliers in the constellation would otherwise shrink every frame of
+  // it to fit particles nobody can see.
+  const radius = new Float32Array(stateCount);
+  const radii = new Float32Array(count);
+  buffers.forEach((buffer, s) => {
+    for (let i = 0; i < count; i += 1) {
+      const k = i * 4;
+      radii[i] = Math.hypot(buffer[k], buffer[k + 1], buffer[k + 2]);
+    }
+    radii.sort();
+    radius[s] = Math.max(0.05, radii[Math.floor(count * 0.98)]);
   });
 
   buffers.forEach((buffer, s) => {
@@ -82,5 +105,5 @@ export function packStates(count: number): PackedStates {
     seed[i] = jitter();
   }
 
-  return { data, width, height, rows, count, stateCount, stagger, seed };
+  return { data, width, height, rows, count, stateCount, stagger, seed, radius };
 }

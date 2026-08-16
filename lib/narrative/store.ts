@@ -22,10 +22,19 @@ export const scrollState = {
   /** Pointer in normalized device coords, -1..1. */
   pointerX: 0,
   pointerY: 0,
-  /** Falls off when the pointer leaves, so touch devices settle to zero. */
+  /**
+   * Eased optical-instrument strength. It follows `pointerTarget`, which holds
+   * at 1 for as long as the pointer is over the document. A parked cursor is
+   * still an inspection — it is how you look closely at something — so this no
+   * longer decays merely because the pointer stopped moving. It falls only when
+   * the pointer actually leaves.
+   */
   pointerStrength: 0,
+  pointerTarget: 0,
   /** Scene state temporarily requested by a focused foreground item. */
   focusState: 0,
+  /** -1..1 slice coordinate the medical states are being cut at. */
+  scanX: 0,
   /** Current and target blend for the focused scene state. */
   focusStrength: 0,
   focusTargetStrength: 0,
@@ -57,13 +66,14 @@ export function setSceneFocus(state: SceneState | null) {
 export type PerfTier = 'high' | 'mid' | 'low';
 
 interface NarrativeStore {
-  actIndex: number;
+  /** Index of the DOM-measured scene anchor currently on screen. */
+  sceneIndex: number;
   reducedMotion: boolean;
   tier: PerfTier;
   /** Fraction of the particle buffer currently drawn, trimmed under load. */
   activeFraction: number;
   webglFailed: boolean;
-  setActIndex: (i: number) => void;
+  setSceneIndex: (i: number) => void;
   setReducedMotion: (v: boolean) => void;
   setTier: (t: PerfTier) => void;
   setActiveFraction: (v: number) => void;
@@ -71,12 +81,12 @@ interface NarrativeStore {
 }
 
 export const useNarrative = create<NarrativeStore>((set) => ({
-  actIndex: 0,
+  sceneIndex: 0,
   reducedMotion: false,
   tier: 'mid',
   activeFraction: 1,
   webglFailed: false,
-  setActIndex: (i) => set((s) => (s.actIndex === i ? s : { actIndex: i })),
+  setSceneIndex: (i) => set((s) => (s.sceneIndex === i ? s : { sceneIndex: i })),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setTier: (tier) => set({ tier }),
   setActiveFraction: (activeFraction) =>

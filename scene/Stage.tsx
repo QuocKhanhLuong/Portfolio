@@ -5,8 +5,12 @@ import { Canvas } from '@react-three/fiber';
 import { useEffect, useState } from 'react';
 import { useNarrative } from '@/lib/narrative/store';
 import { detectTier, DPR_RANGE, MIN_ACTIVE_FRACTION } from '@/lib/perf';
+import { Atmosphere } from './Atmosphere';
 import { CameraRig } from './CameraRig';
+import { GraphLayer } from './graph/GraphLayer';
 import { MotifField } from './MotifField';
+import { SceneClock } from './sceneFrame';
+import { usePackedStates } from './states/usePackedStates';
 import styles from './stage.module.css';
 
 /**
@@ -16,6 +20,24 @@ import styles from './stage.module.css';
  * If WebGL is unavailable the page keeps working: the portfolio still reads
  * cleanly, and the field simply is not there.
  */
+/**
+ * Grain and nodes, from one state texture.
+ *
+ * They are separated from `Stage` only so the packing hook lives inside the
+ * Canvas tree; they are two readings of a single field, and neither is mounted
+ * without the other.
+ */
+function Field() {
+  const packed = usePackedStates();
+  if (!packed) return null;
+  return (
+    <>
+      <MotifField packed={packed} />
+      <GraphLayer packed={packed} />
+    </>
+  );
+}
+
 export function Stage() {
   const tier = useNarrative((s) => s.tier);
   const setTier = useNarrative((s) => s.setTier);
@@ -52,8 +74,10 @@ export function Stage() {
           onDecline={() => setActiveFraction(Math.max(MIN_ACTIVE_FRACTION, 0.7))}
           onIncline={() => setActiveFraction(1)}
         />
+        <SceneClock />
         <CameraRig />
-        <MotifField />
+        <Atmosphere />
+        <Field />
       </Canvas>
     </div>
   );

@@ -1,15 +1,40 @@
 import type { PerfTier } from './narrative/store';
 
 /**
- * Density is not the quality target. These counts are a starting point that the
- * runtime scales down from; composition and transition behaviour carry the
- * work, and the field reads the same at 18k as at 30k.
+ * The grain tier. Subordinate to the graph since the node layer arrived: it is
+ * substrate, not subject, so it runs at roughly a third of its former density.
+ * Density was never the quality target anyway — composition and transition
+ * behaviour carry the work.
  */
 export const PARTICLE_COUNT: Record<PerfTier, number> = {
-  high: 30000,
-  mid: 22000,
-  low: 9000,
+  high: 12000,
+  mid: 8000,
+  low: 3500,
 };
+
+/**
+ * The node tier — the readable graph.
+ *
+ * These nodes are a deterministic subset of the same particle buffer, so the
+ * count must stay well under `PARTICLE_COUNT` at every tier. A few hundred is
+ * the range where a proximity network reads as a diagram; past about 600 it
+ * silts up into a mesh, and the O(n·k) edge pass stops being free.
+ */
+export const NODE_COUNT: Record<PerfTier, number> = {
+  high: 420,
+  mid: 320,
+  low: 180,
+};
+
+/** Node marks scale down with the field so the diagram keeps its weight. */
+export const NODE_SCALE: Record<PerfTier, number> = {
+  high: 1,
+  mid: 0.95,
+  low: 0.86,
+};
+
+/** Edge topology is rebuilt at most this often, in frames, when scroll is calm. */
+export const EDGE_REBUILD_INTERVAL = 3;
 
 /** Lower bound the adaptive scaler will not go past — below this the eye stops
  *  reading as an image and the whole premise breaks. */
