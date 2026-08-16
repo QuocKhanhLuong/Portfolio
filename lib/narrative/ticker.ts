@@ -21,7 +21,7 @@ export const liveFrame: NarrativeFrame = sample(0, {
   ...sample(0),
   camera: { yaw: 0, pitch: 0, distance: 4, offset: [0, 0], dimensionality: 0, drift: 0 },
   palette: { core: [0, 0, 0], accent: [0, 0, 0], density: 1 },
-  interaction: { pointerSign: 1, pointerStrength: 0, turbulence: 0, arc: 0, spread: 0.5 },
+  interaction: { pointerStrength: 0, pointerRadius: 0.5, turbulence: 0, arc: 0, spread: 0.5 },
 });
 
 export function emitFrame() {

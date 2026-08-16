@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Locale } from '@/content/types';
+import { SCENE_STATES, type SceneState } from '@/content/types';
 
 /**
  * Two tiers of state, deliberately.
@@ -9,7 +9,7 @@ import type { Locale } from '@/content/types';
  * state is how animation loops die.
  *
  * The zustand store below holds only things that change a handful of times per
- * visit — the current act, the language, the performance tier. Those may cause
+ * visit — the current act and performance tier. Those may cause
  * renders; nothing else may.
  */
 export const scrollState = {
@@ -24,22 +24,43 @@ export const scrollState = {
   pointerY: 0,
   /** Falls off when the pointer leaves, so touch devices settle to zero. */
   pointerStrength: 0,
+  /** Scene state temporarily requested by a focused foreground item. */
+  focusState: 0,
+  /** Current and target blend for the focused scene state. */
+  focusStrength: 0,
+  focusTargetStrength: 0,
   /** Seconds since the driver started, scaled by the act's motion factor. */
   time: 0,
 };
+
+/**
+ * Foreground content can ask the field to inspect a related state without
+ * changing scroll progress. The request is intentionally small and transient:
+ * scroll remains the source of truth for the continuous scene timeline.
+ */
+export function setSceneFocus(state: SceneState | null) {
+  if (!state) {
+    scrollState.focusTargetStrength = 0;
+    return;
+  }
+
+  const index = SCENE_STATES.indexOf(state);
+  if (index < 0) return;
+
+  scrollState.focusState = index;
+  scrollState.focusTargetStrength = 0.2;
+}
 
 export type PerfTier = 'high' | 'mid' | 'low';
 
 interface NarrativeStore {
   actIndex: number;
-  locale: Locale;
   reducedMotion: boolean;
   tier: PerfTier;
   /** Fraction of the particle buffer currently drawn, trimmed under load. */
   activeFraction: number;
   webglFailed: boolean;
   setActIndex: (i: number) => void;
-  setLocale: (l: Locale) => void;
   setReducedMotion: (v: boolean) => void;
   setTier: (t: PerfTier) => void;
   setActiveFraction: (v: number) => void;
@@ -48,13 +69,11 @@ interface NarrativeStore {
 
 export const useNarrative = create<NarrativeStore>((set) => ({
   actIndex: 0,
-  locale: 'en',
   reducedMotion: false,
   tier: 'mid',
   activeFraction: 1,
   webglFailed: false,
   setActIndex: (i) => set((s) => (s.actIndex === i ? s : { actIndex: i })),
-  setLocale: (locale) => set({ locale }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setTier: (tier) => set({ tier }),
   setActiveFraction: (activeFraction) =>

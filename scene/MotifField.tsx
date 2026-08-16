@@ -93,15 +93,16 @@ function Field({ packed, reducedMotion }: { packed: PackedStates; reducedMotion:
       uStateCount: { value: packed.stateCount },
       uStateA: { value: 0 },
       uStateB: { value: 0 },
+      uFocusState: { value: 0 },
+      uFocusMix: { value: 0 },
       uBlend: { value: 0 },
       uSpread: { value: 0.5 },
       uArc: { value: 0.15 },
       uTime: { value: 0 },
       uTurbulence: { value: 0 },
-      uVelocity: { value: 0 },
       uPointer: { value: new THREE.Vector3() },
       uPointerStrength: { value: 0 },
-      uPointerSign: { value: 1 },
+      uPointerRadius: { value: 0.6 },
       uPixelScale: { value: 6 },
       uCore: { value: new THREE.Color() },
       uAccent: { value: new THREE.Color() },
@@ -137,11 +138,13 @@ function Field({ packed, reducedMotion }: { packed: PackedStates; reducedMotion:
 
     u.uStateA.value = frame.stateAIndex;
     u.uStateB.value = frame.stateBIndex;
+    u.uFocusState.value = scrollState.focusState;
+    u.uFocusMix.value = reducedMotion ? scrollState.focusTargetStrength : scrollState.focusStrength;
     u.uBlend.value = frame.blend;
     u.uSpread.value = reducedMotion ? 0 : frame.interaction.spread;
     u.uArc.value = reducedMotion ? 0 : frame.interaction.arc;
     u.uTurbulence.value = reducedMotion ? 0 : frame.interaction.turbulence;
-    u.uVelocity.value = reducedMotion ? 0 : THREE.MathUtils.clamp(scrollState.velocity * 0.55, -1.2, 1.2);
+    u.uPointerRadius.value = frame.interaction.pointerRadius;
 
     u.uCore.value.setRGB(frame.palette.core[0], frame.palette.core[1], frame.palette.core[2]);
     u.uAccent.value.setRGB(frame.palette.accent[0], frame.palette.accent[1], frame.palette.accent[2]);
@@ -159,14 +162,13 @@ function Field({ packed, reducedMotion }: { packed: PackedStates; reducedMotion:
     if (reducedMotion) {
       u.uPointerStrength.value = 0;
     } else {
-      // Project the cursor onto the plane the field is centred on, so the force
-      // is applied in world space and does not skew with camera distance.
+      // Project the cursor onto the field plane so the shader can use it as an
+      // optical inspection point without coupling the reveal to camera distance.
       ndc.set(scrollState.pointerX, scrollState.pointerY, 0.5).unproject(camera);
       ray.origin.copy(camera.position);
       ray.direction.copy(ndc).sub(camera.position).normalize();
       if (ray.intersectPlane(plane, hit)) u.uPointer.value.copy(hit);
       u.uPointerStrength.value = frame.interaction.pointerStrength * scrollState.pointerStrength;
-      u.uPointerSign.value = frame.interaction.pointerSign;
     }
   });
 
@@ -179,7 +181,7 @@ function Field({ packed, reducedMotion }: { packed: PackedStates; reducedMotion:
         transparent
         depthWrite={false}
         depthTest={false}
-        blending={THREE.AdditiveBlending}
+        blending={THREE.NormalBlending}
       />
     </points>
   );

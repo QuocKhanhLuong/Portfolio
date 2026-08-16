@@ -13,8 +13,8 @@ import styles from './stage.module.css';
  * The canvas. Fixed behind everything, never unmounted, one scene for the whole
  * visit.
  *
- * If WebGL is unavailable the page keeps working: the narrative still runs, the
- * type still resolves, and the field simply is not there.
+ * If WebGL is unavailable the page keeps working: the portfolio still reads
+ * cleanly, and the field simply is not there.
  */
 export function Stage() {
   const tier = useNarrative((s) => s.tier);
@@ -41,7 +41,7 @@ export function Stage() {
         gl={{ antialias: false, alpha: false, powerPreference: 'high-performance' }}
         camera={{ fov: 60, near: 0.1, far: 60, position: [0, 0, 4.2] }}
         onCreated={({ gl }) => {
-          gl.setClearColor('#05070C', 1);
+          gl.setClearColor('#F4F1EA', 1);
         }}
         fallback={null}
         onError={() => setWebglFailed(true)}

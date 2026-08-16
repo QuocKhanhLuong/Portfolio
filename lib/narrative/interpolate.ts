@@ -49,11 +49,6 @@ export interface NarrativeFrame {
   palette: PaletteKey;
   interaction: InteractionKey;
   motion: number;
-  /**
-   * How degraded the act headline is, 0 (clean serif) to 1 (Redaction).
-   * Only non-zero in acts that declare it.
-   */
-  redaction: number;
 }
 
 /** Act keyframes sit at act centres; between them the values cross-fade. */
@@ -102,9 +97,8 @@ const scratch: NarrativeFrame = {
   blend: 0,
   camera: { yaw: 0, pitch: 0, distance: 4, offset: [0, 0], dimensionality: 0, drift: 0 },
   palette: { core: [0, 0, 0], accent: [0, 0, 0], density: 1 },
-  interaction: { pointerSign: 1, pointerStrength: 0, turbulence: 0, arc: 0, spread: 0.5 },
+  interaction: { pointerStrength: 0, pointerRadius: 0.5, turbulence: 0, arc: 0, spread: 0.5 },
   motion: 1,
-  redaction: 0,
 };
 
 export function sample(progress: number, out: NarrativeFrame = scratch): NarrativeFrame {
@@ -148,24 +142,13 @@ export function sample(progress: number, out: NarrativeFrame = scratch): Narrati
   out.palette.accent[2] = accent[2];
   out.palette.density = lerp(KA.palette.density, KB.palette.density, kt);
 
-  out.interaction.pointerSign = lerp(KA.interaction.pointerSign, KB.interaction.pointerSign, kt);
   out.interaction.pointerStrength = lerp(KA.interaction.pointerStrength, KB.interaction.pointerStrength, kt);
+  out.interaction.pointerRadius = lerp(KA.interaction.pointerRadius, KB.interaction.pointerRadius, kt);
   out.interaction.turbulence = lerp(KA.interaction.turbulence, KB.interaction.turbulence, kt);
   out.interaction.arc = lerp(KA.interaction.arc, KB.interaction.arc, kt);
   out.interaction.spread = lerp(KA.interaction.spread, KB.interaction.spread, kt);
 
   out.motion = lerp(KA.motion, KB.motion, kt);
-  out.redaction = redactionAt(out.act, out.actProgress);
 
   return out;
-}
-
-/**
- * Type degradation. `resolve` starts unreadable and clears; `dissolve` runs the
- * other way, which is the whole argument of Act 05.
- */
-export function redactionAt(act: Act, actProgress: number): number {
-  if (!act.redaction) return 0;
-  const ramp = smootherstep(0.08, 0.72, actProgress);
-  return act.redaction === 'resolve' ? 1 - ramp : ramp;
 }

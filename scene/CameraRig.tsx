@@ -10,9 +10,8 @@ import { scrollState, useNarrative } from '@/lib/narrative/store';
  * The camera is a function of narrative progress and nothing else.
  *
  * `dimensionality` gates how much of the yaw, pitch and pointer parallax is
- * actually applied. It is held near zero for the first three acts so that the
- * world reads as flat, and opens to 1 in Act 03 — the arrival of depth is an
- * event, and withholding it for 40% of the scroll is what makes it one.
+ * actually applied. The cursor is an inspection aid, so its camera contribution
+ * stays small even when the point cloud becomes dimensional.
  */
 export function CameraRig() {
   const { camera } = useThree();
@@ -30,12 +29,12 @@ export function CameraRig() {
     const { camera: key } = frame;
     const dim = key.dimensionality;
 
-    const pointerYaw = reducedMotion ? 0 : scrollState.pointerX * 0.16 * scrollState.pointerStrength;
-    const pointerPitch = reducedMotion ? 0 : -scrollState.pointerY * 0.1 * scrollState.pointerStrength;
+    const pointerYaw = reducedMotion ? 0 : scrollState.pointerX * 0.06 * scrollState.pointerStrength;
+    const pointerPitch = reducedMotion ? 0 : -scrollState.pointerY * 0.04 * scrollState.pointerStrength;
     const drift = reducedMotion ? 0 : Math.sin(time.current * 0.24) * key.drift * 0.5;
 
-    // Parallax and drift are scaled by dimensionality: before Act 03 the camera
-    // barely acknowledges that it can move.
+    // Parallax and drift are scaled by dimensionality: flat states stay legible,
+    // while depth states acknowledge the cursor with restrained parallax.
     const yaw = key.yaw + (pointerYaw + drift) * dim;
     const pitch = key.pitch + pointerPitch * dim;
 

@@ -1,28 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
-import { ACTS, CONTACT } from '@/content/acts';
 import { startNarrativeDriver } from '@/lib/narrative/driver';
 import { useNarrative } from '@/lib/narrative/store';
 import { Stage } from '@/scene/Stage';
-import { ActSection } from './ActSection';
-import { Identity, LanguageToggle, Rail, ScrollCue, Spine } from './Chrome';
-import styles from './overlay.module.css';
-
-const SUBTITLE = {
-  en: 'computer vision research',
-  vi: 'nghiên cứu thị giác máy tính',
-};
-
-const CUE = { en: 'scroll', vi: 'cuộn' };
+import { SiteHeader, ProgressLine, ScrollCue } from './Chrome';
+import { Portfolio } from './Portfolio';
 
 /**
- * The DOM half of the experience. Mounts the one scroll driver, then renders
- * the acts in order. Everything animated below this point reads the shared
- * narrative frame; nothing subscribes to scroll on its own.
+ * The page shell owns one scroll driver, one persistent WebGL stage, and one
+ * readable portfolio. The visual field carries the continuous narrative; the
+ * foreground remains ordinary, navigable document content.
  */
 export function Narrative() {
-  const locale = useNarrative((s) => s.locale);
   const setReducedMotion = useNarrative((s) => s.setReducedMotion);
 
   useEffect(() => {
@@ -41,32 +31,10 @@ export function Narrative() {
   return (
     <>
       <Stage />
-      <Identity subtitle={SUBTITLE[locale]} />
-      <LanguageToggle />
-      <Rail />
-      <Spine />
-      <ScrollCue label={CUE[locale]} />
-
-      <main className={styles.root}>
-        {ACTS.map((act, i) => (
-          <ActSection key={act.id} act={act} index={i} locale={locale} />
-        ))}
-
-        <section className={`${styles.act} ${styles.alignCenter}`} style={{ height: '100svh' }}>
-          <div className={styles.sticky}>
-            <div className={styles.inner}>
-              <p className={`lead ${styles.lead}`}>{CONTACT.invitation[locale]}</p>
-              <div className={styles.links}>
-                {CONTACT.links.map((link) => (
-                  <a key={link.label} href={link.href}>
-                    {link.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
+      <SiteHeader />
+      <ProgressLine />
+      <ScrollCue />
+      <Portfolio />
     </>
   );
 }

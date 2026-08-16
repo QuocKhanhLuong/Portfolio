@@ -3,14 +3,14 @@ import { fontClassName } from './fonts';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Learning How to See',
+  title: 'Alvin Luong — Computer Vision Research & Engineering',
   description:
-    'A continuous account of one question — how a machine learns to see — and the work that came out of asking it.',
+    'The portfolio of Alvin Luong: computer vision research, 3D vision, medical imaging, and research engineering.',
 };
 
 export const viewport: Viewport = {
-  themeColor: '#05070C',
-  colorScheme: 'dark',
+  themeColor: '#F4F1EA',
+  colorScheme: 'light',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

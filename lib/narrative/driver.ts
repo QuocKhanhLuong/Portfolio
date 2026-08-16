@@ -70,6 +70,12 @@ export function startNarrativeDriver({ reducedMotion }: DriverOptions): () => vo
     // cursor stops deforming the field.
     scrollState.pointerStrength *= Math.pow(0.35, dt);
 
+    // Foreground project/research focus eases independently from scroll. It is
+    // a temporary inspection request, never a second scene timeline.
+    const focusEase = reducedMotion ? 1 : 1 - Math.pow(0.002, dt);
+    scrollState.focusStrength +=
+      (scrollState.focusTargetStrength - scrollState.focusStrength) * focusEase;
+
     const act = currentActIndex(scrollState.progress);
     if (act !== useNarrative.getState().actIndex) useNarrative.getState().setActIndex(act);
 
@@ -102,5 +108,7 @@ export function startNarrativeDriver({ reducedMotion }: DriverOptions): () => vo
     window.removeEventListener('pointerleave', onPointerLeave);
     lenis?.destroy();
     lenis = null;
+    scrollState.focusTargetStrength = 0;
+    scrollState.focusStrength = 0;
   };
 }
