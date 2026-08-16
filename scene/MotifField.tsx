@@ -3,6 +3,8 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { RESEARCH_EDGES, RESEARCH_NODES } from '@/content/research';
+import { SCENE_STATES } from '@/content/types';
 import { sample, type NarrativeFrame } from '@/lib/narrative/interpolate';
 import { scrollState, useNarrative } from '@/lib/narrative/store';
 import { MIN_ACTIVE_FRACTION, PARTICLE_COUNT } from '@/lib/perf';
@@ -139,7 +141,7 @@ function Field({ packed, reducedMotion }: { packed: PackedStates; reducedMotion:
     u.uStateA.value = frame.stateAIndex;
     u.uStateB.value = frame.stateBIndex;
     u.uFocusState.value = scrollState.focusState;
-    u.uFocusMix.value = reducedMotion ? scrollState.focusTargetStrength : scrollState.focusStrength;
+    u.uFocusMix.value = scrollState.focusStrength;
     u.uBlend.value = frame.blend;
     u.uSpread.value = reducedMotion ? 0 : frame.interaction.spread;
     u.uArc.value = reducedMotion ? 0 : frame.interaction.arc;
@@ -159,30 +161,161 @@ function Field({ packed, reducedMotion }: { packed: PackedStates; reducedMotion:
     const drawCount = Math.floor(packed.count * active);
     if (mesh.geometry.drawRange.count !== drawCount) mesh.geometry.setDrawRange(0, drawCount);
 
-    if (reducedMotion) {
-      u.uPointerStrength.value = 0;
-    } else {
-      // Project the cursor onto the field plane so the shader can use it as an
-      // optical inspection point without coupling the reveal to camera distance.
-      ndc.set(scrollState.pointerX, scrollState.pointerY, 0.5).unproject(camera);
-      ray.origin.copy(camera.position);
-      ray.direction.copy(ndc).sub(camera.position).normalize();
-      if (ray.intersectPlane(plane, hit)) u.uPointer.value.copy(hit);
-      u.uPointerStrength.value = frame.interaction.pointerStrength * scrollState.pointerStrength;
+    // Project the cursor onto the field plane so the shader and the supporting
+    // instrument layers share one optical inspection point.
+    ndc.set(scrollState.pointerX, scrollState.pointerY, 0.5).unproject(camera);
+    ray.origin.copy(camera.position);
+    ray.direction.copy(ndc).sub(camera.position).normalize();
+    if (ray.intersectPlane(plane, hit)) u.uPointer.value.copy(hit);
+    u.uPointerStrength.value = reducedMotion ? 0 : frame.interaction.pointerStrength * scrollState.pointerStrength;
+  });
+
+  return (
+    <>
+      <GraphEdges reducedMotion={reducedMotion} />
+      <ScanPlane pointer={uniforms.uPointer.value} reducedMotion={reducedMotion} />
+      <points ref={points} geometry={geometry} frustumCulled={false}>
+        <shaderMaterial
+          uniforms={uniforms}
+          vertexShader={motifVertexShader}
+          fragmentShader={motifFragmentShader}
+          transparent
+          depthWrite={false}
+          depthTest={false}
+          blending={THREE.NormalBlending}
+        />
+      </points>
+    </>
+  );
+}
+
+const GRAPH_SCALE = 1.5;
+const GRAPH_STATE = SCENE_STATES.indexOf('graph');
+const UNCERTAINTY_STATE = SCENE_STATES.indexOf('uncertainty');
+const VOLUME_STATE = SCENE_STATES.indexOf('volume');
+const HUMAN_STATE = SCENE_STATES.indexOf('human');
+
+function stateWeight(value: number, center: number, radius: number) {
+  const t = THREE.MathUtils.clamp(Math.abs(value - center) / radius, 0, 1);
+  return 1 - t * t * (3 - 2 * t);
+}
+
+/** A restrained diagram layer that clarifies the graph state without glow. */
+function GraphEdges({ reducedMotion }: { reducedMotion: boolean }) {
+  const lines = useRef<THREE.LineSegments>(null);
+  const material = useRef<THREE.LineDashedMaterial>(null);
+  const frame = useRef<NarrativeFrame>(sample(0)).current;
+  const time = useRef(0);
+  const geometry = useMemo(() => {
+    const positions = new Float32Array(RESEARCH_EDGES.length * 6);
+    const nodes = new Map(RESEARCH_NODES.map((node) => [node.id, node.position] as const));
+
+    RESEARCH_EDGES.forEach((edge, index) => {
+      const from = nodes.get(edge.from);
+      const to = nodes.get(edge.to);
+      if (!from || !to) return;
+
+      const offset = index * 6;
+      positions[offset] = from[0] * GRAPH_SCALE;
+      positions[offset + 1] = from[1] * GRAPH_SCALE;
+      positions[offset + 2] = from[2] * GRAPH_SCALE;
+      positions[offset + 3] = to[0] * GRAPH_SCALE;
+      positions[offset + 4] = to[1] * GRAPH_SCALE;
+      positions[offset + 5] = to[2] * GRAPH_SCALE;
+    });
+
+    const next = new THREE.BufferGeometry();
+    next.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    return next;
+  }, []);
+
+  useEffect(() => {
+    lines.current?.computeLineDistances();
+    return () => geometry.dispose();
+  }, [geometry]);
+
+  useFrame((_, delta) => {
+    sample(scrollState.progress, frame);
+    time.current += delta * frame.motion;
+
+    const state = THREE.MathUtils.lerp(frame.stateAIndex, frame.stateBIndex, frame.blend);
+    const graphWeight = stateWeight(state, GRAPH_STATE, 1.25);
+    const uncertaintyWeight = stateWeight(state, UNCERTAINTY_STATE, 1.25);
+    const focused = scrollState.focusState === GRAPH_STATE ? scrollState.focusStrength : 0;
+
+    if (material.current) {
+      material.current.color.setRGB(frame.palette.accent[0], frame.palette.accent[1], frame.palette.accent[2]);
+      material.current.opacity = THREE.MathUtils.clamp(
+        graphWeight * 0.16 + uncertaintyWeight * 0.04 + focused * 0.34,
+        0,
+        0.42,
+      );
+      if (lines.current) {
+        lines.current.rotation.z = reducedMotion ? 0 : Math.sin(time.current * 0.12) * 0.008;
+      }
     }
   });
 
   return (
-    <points ref={points} geometry={geometry} frustumCulled={false}>
-      <shaderMaterial
-        uniforms={uniforms}
-        vertexShader={motifVertexShader}
-        fragmentShader={motifFragmentShader}
+    <lineSegments ref={lines} geometry={geometry} frustumCulled={false}>
+      <lineDashedMaterial
+        ref={material}
+        color="#A48A58"
         transparent
-        depthWrite={false}
         depthTest={false}
-        blending={THREE.NormalBlending}
+        depthWrite={false}
+        dashSize={0.075}
+        gapSize={0.055}
+        opacity={0}
       />
-    </points>
+    </lineSegments>
+  );
+}
+
+/** A narrow translucent slice that turns the medical states into an instrument. */
+function ScanPlane({ pointer, reducedMotion }: { pointer: THREE.Vector3; reducedMotion: boolean }) {
+  const mesh = useRef<THREE.Mesh>(null);
+  const material = useRef<THREE.MeshBasicMaterial>(null);
+  const frame = useRef<NarrativeFrame>(sample(0)).current;
+  const time = useRef(0);
+
+  useFrame((_, delta) => {
+    sample(scrollState.progress, frame);
+    time.current += delta * frame.motion;
+
+    const state = THREE.MathUtils.lerp(frame.stateAIndex, frame.stateBIndex, frame.blend);
+    const medicalWeight = Math.max(
+      stateWeight(state, VOLUME_STATE, 0.95),
+      stateWeight(state, HUMAN_STATE, 0.95),
+    );
+    const focused =
+      scrollState.focusState === VOLUME_STATE || scrollState.focusState === HUMAN_STATE
+        ? scrollState.focusStrength
+        : 0;
+    const instrumentWeight = THREE.MathUtils.clamp(medicalWeight + focused * 0.55, 0, 1);
+
+    if (mesh.current) {
+      mesh.current.position.copy(pointer);
+      mesh.current.rotation.z = reducedMotion ? 0.06 : 0.06 + Math.sin(time.current * 0.22) * 0.025;
+      mesh.current.scale.y = 0.84 + instrumentWeight * 0.2;
+    }
+    if (material.current) {
+      material.current.color.setRGB(frame.palette.accent[0], frame.palette.accent[1], frame.palette.accent[2]);
+      material.current.opacity = instrumentWeight * (0.018 + scrollState.pointerStrength * 0.22 + focused * 0.12);
+    }
+  });
+
+  return (
+    <mesh ref={mesh} renderOrder={2}>
+      <planeGeometry args={[0.055, 4.4]} />
+      <meshBasicMaterial
+        ref={material}
+        color="#71849A"
+        transparent
+        depthTest={false}
+        depthWrite={false}
+        opacity={0}
+      />
+    </mesh>
   );
 }

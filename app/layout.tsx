@@ -3,9 +3,9 @@ import { fontClassName } from './fonts';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Alvin Luong — Computer Vision Research & Engineering',
+  title: 'Luong Quoc Khanh — Computer Vision Research & Engineering',
   description:
-    'The portfolio of Alvin Luong: computer vision research, 3D vision, medical imaging, and research engineering.',
+    'The portfolio of Luong Quoc Khanh: computer vision research, 3D vision, medical imaging, and research engineering.',
 };
 
 export const viewport: Viewport = {

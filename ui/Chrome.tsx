@@ -8,8 +8,8 @@ import styles from './overlay.module.css';
 export function SiteHeader() {
   return (
     <header className={styles.siteHeader}>
-      <a className={styles.brand} href="#top" aria-label="Alvin Luong, back to top">
-        <span className={styles.brandName}>Alvin Luong</span>
+      <a className={styles.brand} href="#top" aria-label="Luong Quoc Khanh, back to top">
+        <span className={styles.brandName}>Luong Quoc Khanh</span>
         <span className={styles.brandRole}>Computer vision research / engineering</span>
       </a>
 

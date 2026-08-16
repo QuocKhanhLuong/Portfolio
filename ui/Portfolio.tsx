@@ -1,6 +1,9 @@
 'use client';
 
+import { useLayoutEffect, useRef } from 'react';
 import type { FocusEvent, ReactNode } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ABOUT, CONTACT, INTRO } from '@/content/portfolio';
 import { CAPABILITIES } from '@/content/capabilities';
 import { EXPERIENCE } from '@/content/experience';
@@ -16,12 +19,14 @@ function SceneFocus({
   className = '',
   article = false,
   label,
+  motion,
 }: {
   state: SceneState;
   children: ReactNode;
   className?: string;
   article?: boolean;
   label?: string;
+  motion?: string;
 }) {
   const activate = () => setSceneFocus(state);
   const clear = () => setSceneFocus(null);
@@ -36,6 +41,7 @@ function SceneFocus({
     onFocus: activate,
     onBlur: handleBlur,
     'aria-label': label,
+    'data-motion': motion,
   };
 
   return article ? <article {...shared}>{children}</article> : <div {...shared}>{children}</div>;
@@ -55,8 +61,8 @@ function SectionHeading({
   id: string;
 }) {
   return (
-    <header className={styles.sectionHeader}>
-      <p className={styles.sectionMarker}>
+    <header className={styles.sectionHeader} data-motion="section">
+      <p className={styles.sectionMarker} data-motion="line">
         <span>{number}</span> / {label}
       </p>
       <div>
@@ -75,9 +81,93 @@ function externalProps(href: string) {
 
 export function Portfolio() {
   const papers = RESEARCH_NODES.filter((node) => node.kind === 'paper' || node.kind === 'open');
+  const rootRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    const context = gsap.context(() => {
+      const heroItems = root.querySelectorAll<HTMLElement>('[data-motion="hero"]');
+      gsap.fromTo(
+        heroItems,
+        { autoAlpha: 0, y: 22 },
+        { autoAlpha: 1, y: 0, duration: 0.9, ease: 'power3.out', stagger: 0.08, clearProps: 'all' },
+      );
+
+      root.querySelectorAll<HTMLElement>('[data-motion="section"]').forEach((element) => {
+        gsap.fromTo(
+          element,
+          { autoAlpha: 0, y: 28 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.8,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: element, start: 'top 84%', once: true },
+          },
+        );
+      });
+
+      root.querySelectorAll<HTMLElement>('[data-motion="row"]').forEach((row) => {
+        const items = row.querySelectorAll<HTMLElement>('[data-motion="row-item"]');
+        gsap.fromTo(
+          items,
+          { autoAlpha: 0, y: 16 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.62,
+            ease: 'power2.out',
+            stagger: 0.045,
+            scrollTrigger: { trigger: row, start: 'top 88%', once: true },
+          },
+        );
+      });
+
+      root.querySelectorAll<HTMLElement>('[data-motion="metadata"]').forEach((element) => {
+        gsap.fromTo(
+          element,
+          { autoAlpha: 0, x: -8 },
+          {
+            autoAlpha: 1,
+            x: 0,
+            duration: 0.5,
+            ease: 'power2.out',
+            scrollTrigger: { trigger: element.closest('[data-motion="row"]') ?? element, start: 'top 88%', once: true },
+          },
+        );
+      });
+
+      root.querySelectorAll<HTMLElement>('[data-motion="line"]').forEach((element) => {
+        gsap.fromTo(
+          element,
+          { scaleX: 0, transformOrigin: 'left center' },
+          {
+            scaleX: 1,
+            duration: 0.75,
+            ease: 'power2.out',
+            scrollTrigger: { trigger: element, start: 'top 86%', once: true },
+          },
+        );
+      });
+
+      root.querySelectorAll<HTMLElement>('[data-parallax]').forEach((element) => {
+        gsap.to(element, {
+          yPercent: -7,
+          ease: 'none',
+          scrollTrigger: { trigger: element, start: 'top bottom', end: 'bottom top', scrub: 0.8 },
+        });
+      });
+    }, root);
+
+    return () => context.revert();
+  }, []);
 
   return (
-    <main className={styles.portfolio} id="top">
+    <main className={styles.portfolio} id="top" ref={rootRef}>
       <a className={styles.skipLink} href="#about">
         Skip to portfolio content
       </a>
@@ -85,12 +175,16 @@ export function Portfolio() {
       <section className={`${styles.section} ${styles.hero}`} aria-labelledby="intro-title">
         <div className={styles.heroGrid}>
           <div>
-            <p className={styles.eyebrow}>{INTRO.eyebrow}</p>
-            <h1 className="display" id="intro-title">
+            <p className={styles.eyebrow} data-motion="hero">
+              {INTRO.eyebrow}
+            </p>
+            <h1 className="display" id="intro-title" data-motion="hero">
               {INTRO.title}
             </h1>
-            <p className={styles.positioning}>{INTRO.positioning}</p>
-            <div className={styles.actionRow}>
+            <p className={styles.positioning} data-motion="hero">
+              {INTRO.positioning}
+            </p>
+            <div className={styles.actionRow} data-motion="hero">
               <a className={styles.primaryAction} href="#work">
                 View selected work <span aria-hidden="true">↘</span>
               </a>
@@ -99,7 +193,7 @@ export function Portfolio() {
               </a>
             </div>
           </div>
-          <aside className={styles.heroAside} aria-label="Current focus">
+          <aside className={styles.heroAside} aria-label="Current focus" data-motion="hero" data-parallax="light">
             <span className={styles.heroAsideRule} />
             <p className="mono">{INTRO.note}</p>
             <p>
@@ -119,7 +213,7 @@ export function Portfolio() {
             description="A short account of the questions that connect the work."
             id="about-title"
           />
-          <div className={styles.aboutGrid}>
+          <div className={styles.aboutGrid} data-parallax="light">
             <div className="body-copy">
               {ABOUT.paragraphs.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>
@@ -154,19 +248,24 @@ export function Portfolio() {
                 article
                 className={styles.projectRow}
                 label={project.title}
+                motion="row"
               >
-                <span className={styles.rowIndex}>{String(index + 1).padStart(2, '0')}</span>
-                <div className={styles.rowMain}>
-                  <p className={styles.rowMeta}>{project.meta}</p>
+                <span className={styles.rowIndex} data-motion="row-item">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <div className={styles.rowMain} data-motion="row-item">
+                  <p className={styles.rowMeta} data-motion="metadata">
+                    {project.meta}
+                  </p>
                   <h3 className={styles.rowTitle}>{project.title}</h3>
                   <p className={styles.rowSummary}>{project.summary}</p>
-                  <div className={styles.tagList} aria-label="Technology stack">
+                  <div className={styles.tagList} aria-label="Technology stack" data-motion="row-item">
                     {project.stack.map((tag) => (
                       <span key={tag}>{tag}</span>
                     ))}
                   </div>
                 </div>
-                <div className={styles.rowAside}>
+                <div className={styles.rowAside} data-motion="row-item">
                   <span className={styles.sceneLabel}>Field / {project.scene}</span>
                   {project.href ? (
                     <a className={styles.rowLink} href={project.href} {...externalProps(project.href)}>
@@ -195,14 +294,25 @@ export function Portfolio() {
             {papers.map((node, index) => {
               const scene: SceneState = node.kind === 'open' ? 'uncertainty' : 'graph';
               return (
-                <SceneFocus key={node.id} state={scene} article className={styles.researchRow} label={node.label}>
-                  <span className={styles.rowIndex}>{String(index + 1).padStart(2, '0')}</span>
-                  <div className={styles.rowMain}>
-                    <p className={styles.rowMeta}>{node.meta}</p>
+                <SceneFocus
+                  key={node.id}
+                  state={scene}
+                  article
+                  className={styles.researchRow}
+                  label={node.label}
+                  motion="row"
+                >
+                  <span className={styles.rowIndex} data-motion="row-item">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <div className={styles.rowMain} data-motion="row-item">
+                    <p className={styles.rowMeta} data-motion="metadata">
+                      {node.meta}
+                    </p>
                     <h3 className={styles.rowTitle}>{node.title ?? node.label}</h3>
                     <p className={styles.rowSummary}>{node.summary}</p>
                   </div>
-                  <div className={styles.rowAside}>
+                  <div className={styles.rowAside} data-motion="row-item">
                     <span className={styles.sceneLabel}>Field / {scene}</span>
                     {node.links?.length ? (
                       node.links.map((link) => (
@@ -231,9 +341,11 @@ export function Portfolio() {
           />
           <div className={styles.experienceList}>
             {EXPERIENCE.map((item) => (
-              <article key={item.id} className={styles.experienceRow}>
-                <p className={styles.rowMeta}>{item.period}</p>
-                <div>
+              <article key={item.id} className={styles.experienceRow} data-motion="row">
+                <p className={styles.rowMeta} data-motion="metadata">
+                  {item.period}
+                </p>
+                <div data-motion="row-item">
                   <h3 className={styles.rowTitle}>{item.role}</h3>
                   <p className={styles.experienceOrganization}>{item.organization}</p>
                   <p className={styles.rowSummary}>{item.summary}</p>
@@ -246,9 +358,15 @@ export function Portfolio() {
             <p className={styles.subsectionMarker}>Technical capabilities</p>
             <div className={styles.capabilityGrid}>
               {CAPABILITIES.map((group) => (
-                <SceneFocus key={group.title} state={group.scene} className={styles.capabilityGroup} label={group.title}>
-                  <h3>{group.title}</h3>
-                  <ul>
+                <SceneFocus
+                  key={group.title}
+                  state={group.scene}
+                  className={styles.capabilityGroup}
+                  label={group.title}
+                  motion="row"
+                >
+                  <h3 data-motion="row-item">{group.title}</h3>
+                  <ul data-motion="row-item">
                     {group.items.map((item) => (
                       <li key={item}>{item}</li>
                     ))}
@@ -262,26 +380,32 @@ export function Portfolio() {
 
       <section className={`${styles.section} ${styles.contactSection}`} id="contact" aria-labelledby="contact-title">
         <div className={styles.contactInner}>
-          <p className={styles.eyebrow}>05 / Contact</p>
-          <h2 className="headline" id="contact-title">
+          <p className={styles.eyebrow} data-motion="section">
+            05 / Contact
+          </p>
+          <h2 className="headline" id="contact-title" data-motion="section">
             Open to careful questions and difficult visual problems.
           </h2>
-          <p className={styles.contactLead}>{CONTACT.invitation}</p>
-          <div className={styles.contactLinks}>
+          <p className={styles.contactLead} data-motion="section">
+            {CONTACT.invitation}
+          </p>
+          <div className={styles.contactLinks} data-motion="row">
             {CONTACT.links.map((link) =>
               link.href ? (
-                <a key={link.label} href={link.href} {...externalProps(link.href)}>
+                <a key={link.label} href={link.href} data-motion="row-item" {...externalProps(link.href)}>
                   {link.label} <span aria-hidden="true">↗</span>
                 </a>
               ) : (
-                <span key={link.label} className={styles.pendingLink}>
+                <span key={link.label} className={styles.pendingLink} data-motion="row-item">
                   <span>{link.label}</span>
                   <small>{link.note}</small>
                 </span>
               ),
             )}
           </div>
-          <p className={styles.footerNote}>Alvin Luong · Computer vision research / engineering</p>
+          <p className={styles.footerNote} data-parallax="light">
+            Luong Quoc Khanh · Computer vision research / engineering
+          </p>
         </div>
       </section>
     </main>

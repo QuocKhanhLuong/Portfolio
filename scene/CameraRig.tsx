@@ -3,6 +3,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { SCENE_STATES } from '@/content/types';
 import { sample, type NarrativeFrame } from '@/lib/narrative/interpolate';
 import { scrollState, useNarrative } from '@/lib/narrative/store';
 
@@ -28,10 +29,23 @@ export function CameraRig() {
 
     const { camera: key } = frame;
     const dim = key.dimensionality;
+    const baseState = THREE.MathUtils.lerp(frame.stateAIndex, frame.stateBIndex, frame.blend);
+    const effectiveState = THREE.MathUtils.lerp(baseState, scrollState.focusState, scrollState.focusStrength);
+    const cloudInspection = stateWeight(effectiveState, SCENE_STATES.indexOf('cloud'), 1.15);
+    const graphInspection = stateWeight(effectiveState, SCENE_STATES.indexOf('graph'), 1.25);
+    const constellationDrift = stateWeight(effectiveState, SCENE_STATES.indexOf('constellation'), 1.1);
 
-    const pointerYaw = reducedMotion ? 0 : scrollState.pointerX * 0.06 * scrollState.pointerStrength;
-    const pointerPitch = reducedMotion ? 0 : -scrollState.pointerY * 0.04 * scrollState.pointerStrength;
-    const drift = reducedMotion ? 0 : Math.sin(time.current * 0.24) * key.drift * 0.5;
+    // Depth and graph states give the cursor a little more room to inspect the
+    // field. Flat states stay nearly still so the foreground remains primary.
+    const pointerYaw = reducedMotion
+      ? 0
+      : scrollState.pointerX * (0.045 + cloudInspection * 0.095 + graphInspection * 0.02) * scrollState.pointerStrength;
+    const pointerPitch = reducedMotion
+      ? 0
+      : -scrollState.pointerY * (0.03 + cloudInspection * 0.075 + graphInspection * 0.018) * scrollState.pointerStrength;
+    const drift = reducedMotion
+      ? 0
+      : Math.sin(time.current * (0.2 - constellationDrift * 0.08)) * key.drift * (0.5 + graphInspection * 0.18);
 
     // Parallax and drift are scaled by dimensionality: flat states stay legible,
     // while depth states acknowledge the cursor with restrained parallax.
@@ -56,4 +70,9 @@ export function CameraRig() {
   });
 
   return null;
+}
+
+function stateWeight(value: number, center: number, radius: number) {
+  const t = THREE.MathUtils.clamp(Math.abs(value - center) / radius, 0, 1);
+  return 1 - t * t * (3 - 2 * t);
 }

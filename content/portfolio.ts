@@ -10,7 +10,7 @@ export const NAV_ITEMS = [
 
 export const INTRO = {
   eyebrow: 'Computer vision research / engineering',
-  title: 'Alvin Luong',
+  title: 'Luong Quoc Khanh',
   positioning:
     'I work across 3D vision, medical imaging, and representation learning—building visual systems that make structure easier to inspect and reason about.',
   note: 'Learning how to see · research in progress',

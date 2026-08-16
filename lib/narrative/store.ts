@@ -33,9 +33,12 @@ export const scrollState = {
   time: 0,
 };
 
+const FOCUS_STRENGTH = 0.52;
+
 /**
  * Foreground content can ask the field to inspect a related state without
- * changing scroll progress. The request is intentionally small and transient:
+ * changing scroll progress. The request is intentionally transient and
+ * smoothly bounded:
  * scroll remains the source of truth for the continuous scene timeline.
  */
 export function setSceneFocus(state: SceneState | null) {
@@ -48,7 +51,7 @@ export function setSceneFocus(state: SceneState | null) {
   if (index < 0) return;
 
   scrollState.focusState = index;
-  scrollState.focusTargetStrength = 0.2;
+  scrollState.focusTargetStrength = FOCUS_STRENGTH;
 }
 
 export type PerfTier = 'high' | 'mid' | 'low';
