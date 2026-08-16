@@ -106,7 +106,7 @@ export function Stage() {
         // something being looked at rather than something being flown through.
         camera={{ fov: SCENE_FOV, near: 0.1, far: 60, position: [0, 0, 4.6] }}
         onCreated={({ gl }) => {
-          gl.setClearColor('#F4F1EA', 1);
+          gl.setClearColor('#080909', 1);
         }}
         fallback={null}
         onError={() => setWebglFailed(true)}

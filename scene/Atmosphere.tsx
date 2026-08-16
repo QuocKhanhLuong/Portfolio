@@ -26,7 +26,7 @@ export function Atmosphere() {
 
   const uniforms = useMemo(
     () => ({
-      uPaper: { value: new THREE.Color('#F4F1EA') },
+      uPaper: { value: new THREE.Color('#080909') },
       uInk: { value: new THREE.Color().setRGB(COLOR.muted[0], COLOR.muted[1], COLOR.muted[2]) },
       uAccent: { value: new THREE.Color() },
       uTime: { value: 0 },

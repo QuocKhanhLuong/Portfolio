@@ -8,9 +8,9 @@ interface CanvasVisualProps {
   className?: string;
 }
 
-const INK = [27, 28, 26] as const;
-const WARM = [184, 101, 70] as const;
-const COOL = [113, 132, 154] as const;
+const INK = [236, 233, 225] as const;
+const WARM = [200, 117, 82] as const;
+const COOL = [130, 150, 170] as const;
 
 function rgba(color: readonly [number, number, number], alpha: number) {
   return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;

@@ -42,19 +42,19 @@
 }
 
 .siteHeaderScrolled {
-  background: rgba(244, 241, 234, 0.86);
-  border: 1px solid rgba(215, 210, 199, 0.82);
-  border-radius: 18px;
-  box-shadow: 0 12px 36px rgba(27, 28, 26, 0.08);
-  left: var(--gutter);
-  padding-bottom: 14px;
-  padding-left: clamp(18px, 2.4vw, 32px);
-  padding-right: clamp(18px, 2.4vw, 32px);
-  padding-top: 14px;
-  right: var(--gutter);
-  top: 16px;
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
+  background: rgba(8, 9, 9, 0.35);
+  border: 1px solid rgba(236, 233, 225, 0.08);
+  border-radius: 0;
+  box-shadow: none;
+  left: 0;
+  padding-bottom: clamp(24px, 2.4vw, 32px);
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+  padding-top: clamp(24px, 2.4vw, 32px);
+  right: 0;
+  top: 0;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .siteHeaderMenuOpen {
@@ -395,8 +395,9 @@
 
 .heroGrid {
   display: grid;
-  gap: var(--layout-gap);
-  grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.34fr);
+  gap: clamp(32px, 6vw, 64px);
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.5fr);
+  width: 100%;
 }
 
 .eyebrow,
@@ -488,19 +489,33 @@
 }
 
 .heroAside {
-  align-self: end;
-  border-left: 1px solid var(--line);
+  align-self: stretch;
+  border-left: 0;
   color: var(--ink-soft);
-  max-width: 19rem;
-  padding: 12px 0 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 4vw, 32px);
   position: relative;
+  padding: 0;
 }
 
-.heroAside p {
+.heroSphereContainer {
+  flex: 0 1 clamp(280px, 50vh, 60vh);
+  min-width: 0;
+  width: 100%;
+}
+
+.heroAsideContent {
+  border-left: 1px solid var(--line);
+  padding: 12px 0 12px 24px;
+  flex: 0 1 auto;
+}
+
+.heroAsideContent p {
   margin: 0;
 }
 
-.heroAside .mono {
+.heroAsideContent .mono {
   color: var(--research);
   margin: 0 0 20px;
 }
@@ -521,7 +536,7 @@
 }
 
 .sectionHeader {
-  background: linear-gradient(180deg, var(--paper) 0%, var(--paper) 72%, rgba(244, 241, 234, 0) 100%);
+  background: transparent;
   display: grid;
   gap: 32px;
   grid-template-columns: minmax(9rem, 0.26fr) minmax(0, 1fr);
@@ -634,7 +649,7 @@
 
 .domainItem:hover,
 .domainItem:focus-visible {
-  background: rgba(236, 232, 223, 0.42);
+  background: rgba(236, 233, 225, 0.04);
   color: var(--accent-warm);
 }
 
@@ -689,7 +704,7 @@
 .projectRow:focus-visible,
 .researchRow:hover,
 .researchRow:focus-visible {
-  background: rgba(236, 232, 223, 0.72);
+  background: rgba(236, 233, 225, 0.06);
   box-shadow: inset 3px 0 0 var(--accent-warm);
 }
 
@@ -908,7 +923,7 @@
 }
 
 .capabilityBlock {
-  margin: clamp(64px, 10vw, 128px) 0 0 26%;
+  margin: clamp(64px, 10vw, 128px) 0 0 0;
 }
 
 .subsectionMarker {
@@ -918,19 +933,24 @@
 
 .capabilityGrid {
   border-top: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .capabilityGroup {
   border-bottom: 1px solid var(--line);
-  border-right: 1px solid var(--line);
-  padding: 24px 24px 28px 0;
+  border-right: 0;
+  display: grid;
+  gap: clamp(24px, 4vw, 48px);
+  grid-template-columns: minmax(6rem, 0.18fr) minmax(0, 1fr);
+  padding: 32px 0;
   transition: color 220ms var(--ease-out), background 220ms var(--ease-out);
 }
 
 .capabilityGroup + .capabilityGroup {
-  padding-left: 24px;
+  padding-left: 0;
+  padding-top: 32px;
 }
 
 .capabilityGroup:last-child {
@@ -940,40 +960,41 @@
 
 .capabilityGroup:hover,
 .capabilityGroup:focus-visible {
-  background: rgba(236, 232, 223, 0.5);
+  background: rgba(236, 233, 225, 0.04);
   color: var(--accent-warm);
 }
 
 .capabilityGroup h3,
 .capabilityGroup ul {
-  transition: transform 320ms var(--ease-out);
+  transition: none;
 }
 
 .capabilityGroup:hover h3,
 .capabilityGroup:focus-visible h3 {
-  transform: translateX(4px);
+  transform: none;
 }
 
 .capabilityGroup h3 {
-  font-family: var(--serif);
-  font-size: 1.55rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
   font-weight: 400;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
   margin: 0;
+  text-transform: uppercase;
 }
 
 .capabilityGroup ul {
   color: var(--ink-soft);
   list-style: none;
-  margin: 24px 0 0;
+  margin: 0;
   padding: 0;
 }
 
 .capabilityGroup li {
-  border-top: 1px solid var(--line);
+  border-top: 0;
   font-size: 0.9rem;
-  padding: 8px 0;
+  padding: 12px 0;
 }
 
 /* ── contact ─────────────────────────────────────────────────────────────── */

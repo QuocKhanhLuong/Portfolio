@@ -55,12 +55,12 @@ const rgb = (hex: string): [number, number, number] => [
 
 /** Paper, graphite, slate, warm ink, and research ochre. */
 export const COLOR = {
-  ink: rgb('#1B1C1A'),
-  inkSoft: rgb('#555A55'),
-  muted: rgb('#8B8F89'),
-  cool: rgb('#71849A'),
-  warm: rgb('#B86546'),
-  research: rgb('#A48A58'),
+  ink: rgb('#ECE9E1'),
+  inkSoft: rgb('#929792'),
+  muted: rgb('#686D69'),
+  cool: rgb('#8296AA'),
+  warm: rgb('#C87552'),
+  research: rgb('#B49A65'),
 };
 
 /**
