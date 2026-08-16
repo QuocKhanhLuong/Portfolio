@@ -24,7 +24,7 @@ import type { PackedStates } from './states/pack';
  */
 
 /** How much of the palette density the grain is allowed to claim. */
-const GRAIN_DENSITY = 0.6;
+const GRAIN_DENSITY = 0.34;
 
 export function MotifField({ packed }: { packed: PackedStates }) {
   const reducedMotion = useNarrative((s) => s.reducedMotion);
@@ -78,7 +78,7 @@ export function MotifField({ packed }: { packed: PackedStates }) {
       uPointer: { value: new THREE.Vector3() },
       uPointerStrength: { value: 0 },
       uPointerRadius: { value: 0.6 },
-      uPixelScale: { value: 5 },
+      uPixelScale: { value: 4 },
       uScanX: { value: 0 },
       uEdgeCount: { value: RESEARCH_EDGES.length },
       uCore: { value: new THREE.Color() },

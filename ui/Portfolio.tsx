@@ -12,7 +12,7 @@ import { RESEARCH_NODES } from '@/content/research';
 import type { SceneState } from '@/content/types';
 import { setSceneFocus } from '@/lib/narrative/store';
 import { splitLines, type SplitLines } from './lines';
-import { ResearchDiagram, ResearchSphere, ResearchTetrahedron, ResearchWave } from './ResearchVisuals';
+import { ResearchDiagram, ResearchTetrahedron, ResearchWave } from './ResearchVisuals';
 import styles from './overlay.module.css';
 
 const marqueeLabels = Array.from(
@@ -377,9 +377,8 @@ export function Portfolio() {
           </div>
           <aside className={styles.heroAside} aria-label="Current focus" data-motion="hero">
             <div data-parallax="light">
-              <div className={styles.heroVisual}>
-                <ResearchSphere className={styles.canvasVisual} />
-              </div>
+              {/* The hero visual is the background graph. A second small sphere
+                  here competed with it for the same job at a tenth the size. */}
               <span className={styles.heroAsideRule} />
               <p className="mono">{INTRO.note}</p>
               <p>

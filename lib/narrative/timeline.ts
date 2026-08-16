@@ -11,8 +11,23 @@ import type { SceneState } from '@/content/types';
 export interface CameraKey {
   yaw: number;
   pitch: number;
+  /**
+   * Distance from the origin. This no longer decides how big the field looks —
+   * `fill` does — so it is free to control perspective alone: closer is a more
+   * dimensional read, further is a flatter, more diagrammatic one.
+   */
   distance: number;
-  /** Screen-space offset of the motif, so it never sits under the copy. */
+  /**
+   * Fraction of the viewport *height* the field should occupy. The composition
+   * divides this by the state's measured radius, so a flat image plane and the
+   * constellation both arrive on screen at the size they were asked for.
+   */
+  fill: number;
+  /**
+   * Offset in units of the field's on-screen radius, not world units. 0.4 means
+   * "shifted by 40% of its own radius", which means the same thing whatever
+   * state is showing. Clamped so the field can never leave the frame.
+   */
   offset: [number, number];
   /**
    * How much the camera is allowed to move in three dimensions, 0–1. Held near
@@ -110,75 +125,75 @@ export interface SceneKey {
  */
 export const SCENE_KEYS: Record<SceneState, SceneKey> = {
   signal: {
-    camera: { yaw: 0, pitch: 0, distance: 4.2, offset: [0, -0.85], dimensionality: 0.05, drift: 0.02 },
+    camera: { yaw: 0, pitch: 0, distance: 4.6, fill: 0.7, offset: [0.44, 0.0], dimensionality: 0.05, drift: 0.02 },
     palette: { core: COLOR.inkSoft, accent: COLOR.cool, density: 0.13 },
     motion: 0.35,
     interaction: { pointerStrength: 0.18, pointerRadius: 0.58, turbulence: 0.001, arc: 0.12, spread: 0.55 },
-    graph: { radius: 0.30, maxDegree: 2, falloff: 1.7, edgeOpacity: 0.20, nodeSize: 0.95, nodeOpacity: 0.34, semantic: 0 },
+    graph: { radius: 0.30, maxDegree: 2, falloff: 1.7, edgeOpacity: 0.3, nodeSize: 0.95, nodeOpacity: 0.62, semantic: 0 },
   },
   pixel: {
-    camera: { yaw: 0.03, pitch: 0.02, distance: 3.5, offset: [-0.72, 0.08], dimensionality: 0.1, drift: 0.04 },
+    camera: { yaw: 0.03, pitch: 0.02, distance: 4.2, fill: 0.66, offset: [-0.42, 0.05], dimensionality: 0.1, drift: 0.04 },
     palette: { core: COLOR.inkSoft, accent: COLOR.cool, density: 0.18 },
     motion: 0.7,
     interaction: { pointerStrength: 0.34, pointerRadius: 0.5, turbulence: 0.0012, arc: 0.1, spread: 0.5 },
-    graph: { radius: 0.20, maxDegree: 3, falloff: 1.2, edgeOpacity: 0.16, nodeSize: 0.85, nodeOpacity: 0.40, semantic: 0 },
+    graph: { radius: 0.20, maxDegree: 3, falloff: 1.2, edgeOpacity: 0.24, nodeSize: 0.85, nodeOpacity: 0.66, semantic: 0 },
   },
   image: {
-    camera: { yaw: 0.05, pitch: 0.02, distance: 3.7, offset: [-0.72, 0.06], dimensionality: 0.14, drift: 0.06 },
+    camera: { yaw: 0.05, pitch: 0.02, distance: 4.2, fill: 0.66, offset: [-0.42, 0.04], dimensionality: 0.14, drift: 0.06 },
     palette: { core: COLOR.inkSoft, accent: COLOR.cool, density: 0.19 },
     motion: 0.7,
     interaction: { pointerStrength: 0.24, pointerRadius: 0.54, turbulence: 0.0015, arc: 0.1, spread: 0.5 },
-    graph: { radius: 0.22, maxDegree: 3, falloff: 1.2, edgeOpacity: 0.14, nodeSize: 0.85, nodeOpacity: 0.42, semantic: 0 },
+    graph: { radius: 0.22, maxDegree: 3, falloff: 1.2, edgeOpacity: 0.22, nodeSize: 0.85, nodeOpacity: 0.68, semantic: 0 },
   },
   features: {
-    camera: { yaw: -0.12, pitch: 0.06, distance: 4.2, offset: [0.78, 0.04], dimensionality: 0.25, drift: 0.08 },
+    camera: { yaw: -0.12, pitch: 0.06, distance: 4.4, fill: 0.68, offset: [0.45, 0.03], dimensionality: 0.25, drift: 0.08 },
     palette: { core: COLOR.cool, accent: COLOR.ink, density: 0.22 },
     motion: 0.95,
     interaction: { pointerStrength: 0.34, pointerRadius: 0.48, turbulence: 0.0015, arc: 0.16, spread: 0.62 },
-    graph: { radius: 0.28, maxDegree: 4, falloff: 1.5, edgeOpacity: 0.24, nodeSize: 0.9, nodeOpacity: 0.46, semantic: 0 },
+    graph: { radius: 0.28, maxDegree: 4, falloff: 1.5, edgeOpacity: 0.32, nodeSize: 0.9, nodeOpacity: 0.72, semantic: 0 },
   },
   cloud: {
     // The first state with real dimensionality. Everything before it was flat.
-    camera: { yaw: 0.42, pitch: 0.22, distance: 3.1, offset: [-0.55, 0.05], dimensionality: 1.0, drift: 0.35 },
+    camera: { yaw: 0.42, pitch: 0.22, distance: 3.6, fill: 0.7, offset: [-0.34, 0.03], dimensionality: 1.0, drift: 0.35 },
     palette: { core: COLOR.cool, accent: COLOR.ink, density: 0.24 },
     motion: 1.15,
     interaction: { pointerStrength: 0.38, pointerRadius: 0.72, turbulence: 0.002, arc: 0.12, spread: 0.45 },
-    graph: { radius: 0.24, maxDegree: 3, falloff: 1.8, edgeOpacity: 0.18, nodeSize: 1.0, nodeOpacity: 0.48, semantic: 0 },
+    graph: { radius: 0.24, maxDegree: 3, falloff: 1.8, edgeOpacity: 0.26, nodeSize: 1.0, nodeOpacity: 0.74, semantic: 0 },
   },
   volume: {
-    camera: { yaw: 0.55, pitch: -0.1, distance: 3.0, offset: [0.8, -0.06], dimensionality: 0.9, drift: 0.14 },
+    camera: { yaw: 0.55, pitch: -0.1, distance: 3.5, fill: 0.68, offset: [0.46, -0.04], dimensionality: 0.9, drift: 0.14 },
     palette: { core: COLOR.warm, accent: COLOR.ink, density: 0.23 },
     motion: 0.45,
     interaction: { pointerStrength: 0.3, pointerRadius: 0.62, turbulence: 0.0008, arc: 0.08, spread: 0.35 },
-    graph: { radius: 0.22, maxDegree: 3, falloff: 1.6, edgeOpacity: 0.14, nodeSize: 0.95, nodeOpacity: 0.44, semantic: 0 },
+    graph: { radius: 0.22, maxDegree: 3, falloff: 1.6, edgeOpacity: 0.22, nodeSize: 0.95, nodeOpacity: 0.7, semantic: 0 },
   },
   human: {
     // A warm annotation state. Slowest motion on the site.
-    camera: { yaw: 0.6, pitch: -0.14, distance: 2.9, offset: [0.8, -0.08], dimensionality: 0.85, drift: 0.12 },
+    camera: { yaw: 0.6, pitch: -0.14, distance: 3.4, fill: 0.66, offset: [0.46, -0.05], dimensionality: 0.85, drift: 0.12 },
     palette: { core: COLOR.warm, accent: COLOR.ink, density: 0.23 },
     motion: 0.4,
     interaction: { pointerStrength: 0.28, pointerRadius: 0.62, turbulence: 0.0008, arc: 0.08, spread: 0.35 },
-    graph: { radius: 0.20, maxDegree: 2, falloff: 1.6, edgeOpacity: 0.11, nodeSize: 0.95, nodeOpacity: 0.42, semantic: 0 },
+    graph: { radius: 0.20, maxDegree: 2, falloff: 1.6, edgeOpacity: 0.18, nodeSize: 0.95, nodeOpacity: 0.68, semantic: 0 },
   },
   uncertainty: {
-    camera: { yaw: 0.2, pitch: 0.1, distance: 4.6, offset: [-0.5, 0.05], dimensionality: 0.7, drift: 0.5 },
+    camera: { yaw: 0.2, pitch: 0.1, distance: 4.4, fill: 0.7, offset: [-0.3, 0.03], dimensionality: 0.7, drift: 0.5 },
     palette: { core: COLOR.muted, accent: COLOR.research, density: 0.16 },
     motion: 0.8,
     interaction: { pointerStrength: 0.3, pointerRadius: 0.7, turbulence: 0.003, arc: 0.22, spread: 0.7 },
-    graph: { radius: 0.32, maxDegree: 4, falloff: 1.3, edgeOpacity: 0.22, nodeSize: 0.9, nodeOpacity: 0.38, semantic: 0.35 },
+    graph: { radius: 0.32, maxDegree: 4, falloff: 1.3, edgeOpacity: 0.3, nodeSize: 0.9, nodeOpacity: 0.64, semantic: 0.22 },
   },
   graph: {
-    camera: { yaw: 0.1, pitch: 0.06, distance: 5.2, offset: [0, -0.22], dimensionality: 0.6, drift: 0.14 },
+    camera: { yaw: 0.1, pitch: 0.06, distance: 4.2, fill: 0.72, offset: [0.5, -0.04], dimensionality: 0.6, drift: 0.14 },
     palette: { core: COLOR.research, accent: COLOR.ink, density: 0.21 },
     motion: 0.7,
     interaction: { pointerStrength: 0.36, pointerRadius: 0.66, turbulence: 0.0015, arc: 0.1, spread: 0.4 },
-    graph: { radius: 0.38, maxDegree: 4, falloff: 1.4, edgeOpacity: 0.38, nodeSize: 1.15, nodeOpacity: 0.62, semantic: 1 },
+    graph: { radius: 0.34, maxDegree: 4, falloff: 1.5, edgeOpacity: 0.46, nodeSize: 1.15, nodeOpacity: 0.86, semantic: 0.4 },
   },
   constellation: {
-    camera: { yaw: 0.28, pitch: 0.14, distance: 9.6, offset: [0, 0], dimensionality: 0.35, drift: 0.06 },
+    camera: { yaw: 0.28, pitch: 0.14, distance: 5.4, fill: 0.76, offset: [0.22, 0.0], dimensionality: 0.35, drift: 0.06 },
     palette: { core: COLOR.muted, accent: COLOR.inkSoft, density: 0.1 },
     motion: 0.2,
     interaction: { pointerStrength: 0.14, pointerRadius: 0.8, turbulence: 0.0005, arc: 0.14, spread: 0.8 },
-    graph: { radius: 0.55, maxDegree: 1, falloff: 2.2, edgeOpacity: 0.09, nodeSize: 0.8, nodeOpacity: 0.26, semantic: 0 },
+    graph: { radius: 0.55, maxDegree: 1, falloff: 2.2, edgeOpacity: 0.14, nodeSize: 0.8, nodeOpacity: 0.48, semantic: 0 },
   },
 };

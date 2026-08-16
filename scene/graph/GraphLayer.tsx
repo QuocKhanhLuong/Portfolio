@@ -10,9 +10,19 @@ import { EDGE_REBUILD_INTERVAL, NODE_COUNT, NODE_SCALE } from '@/lib/perf';
 import { edgeFragmentShader, edgeVertexShader } from '@/scene/shaders/edges';
 import { nodeFragmentShader, nodeVertexShader } from '@/scene/shaders/node';
 import type { PackedStates } from '@/scene/states/pack';
-import { MAX_FOCUS_MIX, SCENE_INDEX, sceneClock, scenePointer } from '../sceneFrame';
+import { graphDebug } from '../debug';
+import { MAX_FOCUS_MIX, SCENE_INDEX, sceneClock, sceneField, scenePointer } from '../sceneFrame';
 import { buildEdges, createEdgeBuffers, refreshEdgePositions } from './edges';
 import { buildNodeField, updateNodes, type NodeUpdate } from './nodes';
+
+/**
+ * Base node size in device pixels at unit distance.
+ *
+ * The nodes are the thing being read, so they are marks with an inside and an
+ * outside, not points — below about 6 device pixels the ring closes up and the
+ * whole layer degrades into the grain it is supposed to sit above.
+ */
+const NODE_BASE_SIZE = 22;
 
 /**
  * The readable layer: a few hundred nodes drawn from the same field the grain
@@ -27,6 +37,7 @@ export function GraphLayer({ packed }: { packed: PackedStates }) {
   const tier = useNarrative((s) => s.tier);
   const reducedMotion = useNarrative((s) => s.reducedMotion);
   const { gl } = useThree();
+  const debug = graphDebug();
 
   const nodes = useRef<THREE.Points>(null);
   const edges = useRef<THREE.LineSegments>(null);
@@ -61,8 +72,10 @@ export function GraphLayer({ packed }: { packed: PackedStates }) {
 
   const nodeUniforms = useMemo(
     () => ({
-      uSize: { value: 9 * NODE_SCALE[tier] },
+      uSize: { value: NODE_BASE_SIZE * NODE_SCALE[tier] },
       uPixelRatio: { value: 1 },
+      uFocal: { value: 4.6 },
+      uSpan: { value: 1 },
       uCore: { value: new THREE.Color() },
       uAccent: { value: new THREE.Color() },
       uOpacity: { value: 0 },
@@ -78,6 +91,8 @@ export function GraphLayer({ packed }: { packed: PackedStates }) {
       uSemantic: { value: 0 },
       uTime: { value: 0 },
       uDash: { value: 1.6 },
+      uFocal: { value: 4.6 },
+      uSpan: { value: 1 },
     }),
     [],
   );
@@ -121,10 +136,20 @@ export function GraphLayer({ packed }: { packed: PackedStates }) {
   );
 
   const frameCount = useRef(0);
+  const reported = useRef(false);
 
   useFrame((_, delta) => {
     const frame = liveFrame;
     const key = frame.graph;
+
+    // Debug: hold one state, dead centre, at full strength. Nothing about the
+    // graph's visibility should depend on scroll position or scene weights.
+    if (debug.enabled) {
+      const forced = SCENE_INDEX[debug.state as keyof typeof SCENE_INDEX] ?? SCENE_INDEX.signal;
+      frame.stateAIndex = forced;
+      frame.stateBIndex = forced;
+      frame.blend = 0;
+    }
 
     update.time = sceneClock.time;
     update.focusState = scrollState.focusState;
@@ -164,20 +189,57 @@ export function GraphLayer({ packed }: { packed: PackedStates }) {
     (nodeGeometry.getAttribute('aScan') as THREE.BufferAttribute).needsUpdate = true;
     (nodeGeometry.getAttribute('aConfidence') as THREE.BufferAttribute).needsUpdate = true;
 
+    // Depth reference: where the field's centre sits in view, and how deep it
+    // is. Both shaders read the same pair, so nodes and edges recede together.
+    const span = Math.max(0.25, sceneField.halfWidth);
+    nodeUniforms.uFocal.value = frame.camera.distance;
+    nodeUniforms.uSpan.value = span;
+    edgeUniforms.uFocal.value = frame.camera.distance;
+    edgeUniforms.uSpan.value = span;
+
     const { core, accent } = frame.palette;
-    nodeUniforms.uCore.value.setRGB(core[0], core[1], core[2]);
-    nodeUniforms.uAccent.value.setRGB(accent[0], accent[1], accent[2]);
-    nodeUniforms.uOpacity.value = key.nodeOpacity;
-    nodeUniforms.uSize.value = 9 * NODE_SCALE[tier] * key.nodeSize;
+    if (debug.enabled) {
+      // Graphite on paper, no fades, no semantic cross-dissolve.
+      nodeUniforms.uCore.value.setRGB(0.106, 0.11, 0.102);
+      nodeUniforms.uAccent.value.setRGB(0.106, 0.11, 0.102);
+      nodeUniforms.uOpacity.value = 1;
+      nodeUniforms.uSize.value = 26;
+      edgeUniforms.uCore.value.setRGB(0.106, 0.11, 0.102);
+      edgeUniforms.uAccent.value.setRGB(0.106, 0.11, 0.102);
+      edgeUniforms.uOpacity.value = 0.5;
+      edgeUniforms.uSemantic.value = 0;
+      edgeUniforms.uTime.value = 0;
+    } else {
+      nodeUniforms.uCore.value.setRGB(core[0], core[1], core[2]);
+      nodeUniforms.uAccent.value.setRGB(accent[0], accent[1], accent[2]);
+      nodeUniforms.uOpacity.value = key.nodeOpacity;
+      nodeUniforms.uSize.value = NODE_BASE_SIZE * NODE_SCALE[tier] * key.nodeSize;
 
-    edgeUniforms.uCore.value.setRGB(core[0], core[1], core[2]);
-    edgeUniforms.uAccent.value.setRGB(accent[0], accent[1], accent[2]);
-    edgeUniforms.uOpacity.value = key.edgeOpacity;
-    edgeUniforms.uSemantic.value = key.semantic;
-    edgeUniforms.uTime.value = reducedMotion ? 0 : sceneClock.time;
+      edgeUniforms.uCore.value.setRGB(core[0], core[1], core[2]);
+      edgeUniforms.uAccent.value.setRGB(accent[0], accent[1], accent[2]);
+      edgeUniforms.uOpacity.value = key.edgeOpacity;
+      edgeUniforms.uSemantic.value = key.semantic;
+      edgeUniforms.uTime.value = reducedMotion ? 0 : sceneClock.time;
+    }
 
-    if (nodes.current) nodes.current.visible = key.nodeOpacity > 0.005;
-    if (edges.current) edges.current.visible = buffers.count > 0 && key.edgeOpacity > 0.003;
+    if (nodes.current) nodes.current.visible = debug.enabled || key.nodeOpacity > 0.005;
+    if (edges.current) {
+      edges.current.visible = buffers.count > 0 && (debug.enabled || key.edgeOpacity > 0.003);
+    }
+
+    // One line, once, naming the numbers that decide whether anything is on
+    // screen at all. Cheap to keep; it is the first thing worth knowing.
+    if (!reported.current && buffers.count > 0) {
+      reported.current = true;
+      // eslint-disable-next-line no-console
+      console.log(
+        `[graph] nodes=${field.count} draw=${nodeGeometry.drawRange.count} ` +
+          `edges=${buffers.count} semantic=${field.semanticEdgeCount} ` +
+          `extent=${field.extent.toFixed(2)} scale=${sceneField.scale.toFixed(2)} ` +
+          `offset=${sceneField.offsetX.toFixed(2)},${sceneField.offsetY.toFixed(2)} ` +
+          `nodeOpacity=${nodeUniforms.uOpacity.value.toFixed(2)}`,
+      );
+    }
   });
 
   return (
@@ -188,7 +250,7 @@ export function GraphLayer({ packed }: { packed: PackedStates }) {
           vertexShader={edgeVertexShader}
           fragmentShader={edgeFragmentShader}
           transparent
-          depthTest={false}
+          depthTest
           depthWrite={false}
           blending={THREE.NormalBlending}
         />
@@ -199,7 +261,7 @@ export function GraphLayer({ packed }: { packed: PackedStates }) {
           vertexShader={nodeVertexShader}
           fragmentShader={nodeFragmentShader}
           transparent
-          depthTest={false}
+          depthTest
           depthWrite={false}
           blending={THREE.NormalBlending}
         />

@@ -228,10 +228,6 @@ function CanvasVisual({ variant, className = '' }: CanvasVisualProps & { variant
   return <canvas ref={canvasRef} className={className} aria-hidden="true" />;
 }
 
-export function ResearchSphere({ className = '' }: CanvasVisualProps) {
-  return <CanvasVisual variant="sphere" className={className} />;
-}
-
 export function ResearchTetrahedron({ className = '' }: CanvasVisualProps) {
   return <CanvasVisual variant="tetrahedron" className={className} />;
 }

@@ -29,14 +29,16 @@ export interface PackedStates {
   /** Per-particle random seed for arc direction and drift. */
   seed: Float32Array;
   /**
-   * Bounding radius of each state, measured not assumed.
+   * Half-extent of each state on each axis, measured not assumed: three floats
+   * per state, x then y then z.
    *
-   * States differ in size by a factor of five — a flat image plane is nothing
-   * like the constellation — so a single camera distance can only ever frame
-   * one of them. The scene divides by this to put every state on screen at a
-   * chosen fraction of the viewport instead.
+   * A single radius is not enough. The states are not the same shape — the
+   * image plane is 4.3 wide and 1.6 tall, the hero shell is a ball, the
+   * constellation is five times either — so fitting them all by radius frames
+   * the wide ones by their width and leaves them a quarter of the viewport
+   * high. The scene contain-fits against these instead.
    */
-  radius: Float32Array;
+  halfExtent: Float32Array;
 }
 
 export function packStates(count: number): PackedStates {
@@ -67,15 +69,15 @@ export function packStates(count: number): PackedStates {
   // Measured from the 98th percentile rather than the true maximum: a handful
   // of far outliers in the constellation would otherwise shrink every frame of
   // it to fit particles nobody can see.
-  const radius = new Float32Array(stateCount);
-  const radii = new Float32Array(count);
+  const halfExtent = new Float32Array(stateCount * 3);
+  const scratch = new Float32Array(count);
+  const cut = Math.floor(count * 0.98);
   buffers.forEach((buffer, s) => {
-    for (let i = 0; i < count; i += 1) {
-      const k = i * 4;
-      radii[i] = Math.hypot(buffer[k], buffer[k + 1], buffer[k + 2]);
+    for (let axis = 0; axis < 3; axis += 1) {
+      for (let i = 0; i < count; i += 1) scratch[i] = Math.abs(buffer[i * 4 + axis]);
+      scratch.sort();
+      halfExtent[s * 3 + axis] = Math.max(0.02, scratch[cut]);
     }
-    radii.sort();
-    radius[s] = Math.max(0.05, radii[Math.floor(count * 0.98)]);
   });
 
   buffers.forEach((buffer, s) => {
@@ -105,5 +107,5 @@ export function packStates(count: number): PackedStates {
     seed[i] = jitter();
   }
 
-  return { data, width, height, rows, count, stateCount, stagger, seed, radius };
+  return { data, width, height, rows, count, stateCount, stagger, seed, halfExtent };
 }

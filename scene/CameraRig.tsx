@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { scrollState, useNarrative } from '@/lib/narrative/store';
 import { liveFrame } from '@/lib/narrative/ticker';
+import { graphDebug } from './debug';
 import { SCENE_INDEX, sceneClock, sceneWeights } from './sceneFrame';
 
 /**
@@ -17,12 +18,22 @@ import { SCENE_INDEX, sceneClock, sceneWeights } from './sceneFrame';
 export function CameraRig() {
   const { camera } = useThree();
   const reducedMotion = useNarrative((s) => s.reducedMotion);
+  const debug = graphDebug();
 
   const target = useMemo(() => new THREE.Vector3(), []);
   const desired = useMemo(() => new THREE.Vector3(), []);
 
   useFrame((_, delta) => {
     const frame = liveFrame;
+
+    // Debug mode freezes the camera dead ahead, so anything that is wrong with
+    // the field cannot be blamed on where it is being looked at from.
+    if (debug.enabled) {
+      camera.position.set(0, 0, frame.camera.distance);
+      camera.lookAt(0, 0, 0);
+      return;
+    }
+
     const { camera: key } = frame;
     const dim = key.dimensionality;
 
@@ -57,11 +68,12 @@ export function CameraRig() {
     const yaw = key.yaw + (pointerYaw + drift) * dim;
     const pitch = key.pitch + pointerPitch * dim;
 
-    const [ox, oy] = key.offset;
-
+    // The camera orbits the origin and nothing else. Where the field sits on
+    // screen is the group's business now — see `composition.ts`. Two systems
+    // both trying to offset the composition is how it ended up in a corner.
     desired.set(
-      Math.sin(yaw) * Math.cos(pitch) * key.distance + ox,
-      Math.sin(pitch) * key.distance + oy,
+      Math.sin(yaw) * Math.cos(pitch) * key.distance,
+      Math.sin(pitch) * key.distance,
       Math.cos(yaw) * Math.cos(pitch) * key.distance,
     );
 
@@ -70,7 +82,7 @@ export function CameraRig() {
     const ease = reducedMotion ? 1 : 1 - Math.pow(0.002, delta);
     camera.position.lerp(desired, ease);
 
-    target.set(ox, oy, 0);
+    target.set(0, 0, 0);
     camera.lookAt(target);
   });
 

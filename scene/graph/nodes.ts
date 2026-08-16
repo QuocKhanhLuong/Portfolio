@@ -79,47 +79,71 @@ export function buildNodeField(packed: PackedStates, wanted: number): NodeField 
 }
 
 /**
- * Map the research topology onto the node subset.
+ * Route the research topology through the field.
  *
- * The `graph` state already packs particles onto research node clusters and
- * along their edges. So for each research node we find the subset node that
- * landed closest to it in that state, and use those as the representatives. The
- * result is that when the graph state is on screen the edges drawn are the
- * actual relationships in `content/research.ts` — `builds`, `informs`,
- * `tension` — rather than whichever particles happen to be near each other.
+ * Drawing each relationship as one straight line between two representative
+ * nodes produced exactly the wrong picture: a handful of long chords crossing
+ * the whole composition, and the reading column with it. A relationship between
+ * two regions of a volume is not a chord through the middle of it.
+ *
+ * So each research edge is walked in short hops instead. The straight path is
+ * sampled, each sample snaps to the nearest node in the field, and consecutive
+ * distinct nodes become segments. The relationship still connects the same two
+ * places, but it travels through the material — the segments are the same
+ * length as the proximity network around them, and the meaning reads as a
+ * current through the field rather than a line ruled over it.
  */
+const ROUTE_HOPS = 7;
+
 function buildSemanticEdges(packed: PackedStates, field: NodeField) {
   const graphState = SCENE_STATES.indexOf('graph');
   if (graphState < 0) return;
 
-  const representative = new Int32Array(RESEARCH_NODES.length).fill(-1);
-  const best = new Float32Array(RESEARCH_NODES.length).fill(Infinity);
+  // Node positions in the graph state, which is the only state where the
+  // research topology means anything.
+  const at = new Float32Array(field.count * 3);
   const p = { x: 0, y: 0, z: 0 };
-
   for (let n = 0; n < field.count; n += 1) {
     readState(packed, graphState, field.source[n], p);
-    for (let r = 0; r < RESEARCH_NODES.length; r += 1) {
-      const target = RESEARCH_NODES[r].position;
+    at[n * 3] = p.x;
+    at[n * 3 + 1] = p.y;
+    at[n * 3 + 2] = p.z;
+  }
+
+  const nearest = (x: number, y: number, z: number) => {
+    let best = Infinity;
+    let index = 0;
+    for (let n = 0; n < field.count; n += 1) {
       const d =
-        (p.x - target[0] * GRAPH_SCALE) ** 2 +
-        (p.y - target[1] * GRAPH_SCALE) ** 2 +
-        (p.z - target[2] * GRAPH_SCALE) ** 2;
-      if (d < best[r]) {
-        best[r] = d;
-        representative[r] = n;
+        (at[n * 3] - x) ** 2 + (at[n * 3 + 1] - y) ** 2 + (at[n * 3 + 2] - z) ** 2;
+      if (d < best) {
+        best = d;
+        index = n;
       }
     }
-  }
+    return index;
+  };
 
   const pairs: number[] = [];
   RESEARCH_EDGES.forEach((edge) => {
     const from = NODE_INDEX.get(edge.from);
     const to = NODE_INDEX.get(edge.to);
     if (from === undefined || to === undefined) return;
-    const a = representative[from];
-    const b = representative[to];
-    if (a < 0 || b < 0 || a === b) return;
-    pairs.push(a, b);
+
+    const A = RESEARCH_NODES[from].position;
+    const B = RESEARCH_NODES[to].position;
+
+    let previous = -1;
+    for (let h = 0; h <= ROUTE_HOPS; h += 1) {
+      const t = h / ROUTE_HOPS;
+      const node = nearest(
+        (A[0] + (B[0] - A[0]) * t) * GRAPH_SCALE,
+        (A[1] + (B[1] - A[1]) * t) * GRAPH_SCALE,
+        (A[2] + (B[2] - A[2]) * t) * GRAPH_SCALE,
+      );
+      if (previous >= 0 && node !== previous) pairs.push(previous, node);
+      previous = node;
+    }
   });
 
   field.semanticEdges = Int32Array.from(pairs);

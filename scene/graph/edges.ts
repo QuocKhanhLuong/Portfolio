@@ -6,11 +6,15 @@ import type { NodeField } from './nodes';
  *
  * Two things are drawn here, in one buffer:
  *
- *  - The *semantic* edges: the actual relationships in `content/research.ts`,
- *    mapped onto their representative nodes once at build time. These never
- *    change topology — a relationship does not stop existing because two nodes
- *    drifted apart — only opacity, which follows `GraphKey.semantic`.
  *  - The *proximity* edges: whatever the field's current arrangement supports.
+ *    These are the primary network. They are what makes the field look like a
+ *    connected volume rather than a scatter, and they own the budget.
+ *  - The *semantic* edges: the research relationships, routed as short hops
+ *    through nearby nodes at build time (see `nodes.ts`). Secondary, and
+ *    deliberately so — meaning emerges inside the field, it is not draped over
+ *    it. They are appended after proximity and fade with length like everything
+ *    else, because a semantic edge that ignored distance was the one thing on
+ *    screen crossing the whole page.
  *
  * Proximity selection is explicitly bounded, because "everything within r" is
  * not a diagram, it is a mesh. Every candidate must clear the radius; every node
@@ -20,6 +24,9 @@ import type { NodeField } from './nodes';
  * arrangement always produces the same network, and a rebuild never reshuffles
  * edges that did not need to move.
  */
+
+/** How much further than the proximity threshold a routed hop may stretch. */
+const SEMANTIC_REACH = 2.2;
 
 export interface EdgeBuffers {
   /** Two vertices per edge, xyz interleaved. */
@@ -41,6 +48,7 @@ export function createEdgeBuffers(nodeCount: number, semanticCount: number): Edg
   // Degree caps bound this: the practical worst case is nodeCount * maxDegree / 2
   // and maxDegree never exceeds 4, plus the fixed semantic set.
   const capacity = nodeCount * 2 + semanticCount + 16;
+
   return {
     position: new Float32Array(capacity * 6),
     weight: new Float32Array(capacity * 2),
@@ -94,15 +102,6 @@ export function buildEdges(field: NodeField, key: GraphKey, out: EdgeBuffers): v
   const radius = Math.max(0.02, key.radius);
   const maxDegree = Math.max(0, Math.round(key.maxDegree));
   let count = 0;
-
-  // Semantic edges first, so they survive the budget when it binds.
-  for (let e = 0; e < field.semanticEdgeCount && count < out.capacity; e += 1) {
-    out.pairs[count * 2] = field.semanticEdges[e * 2];
-    out.pairs[count * 2 + 1] = field.semanticEdges[e * 2 + 1];
-    out.kind[count * 2] = 1;
-    out.kind[count * 2 + 1] = 1;
-    count += 1;
-  }
 
   if (maxDegree > 0 && key.edgeOpacity > 0.001) {
     if (degree.length < n) throw new Error('node count exceeds edge degree scratch');
@@ -212,6 +211,18 @@ export function buildEdges(field: NodeField, key: GraphKey, out: EdgeBuffers): v
     }
   }
 
+  // Semantic edges last: the proximity network is the composition, and the
+  // relationships are read inside it.
+  if (key.semantic > 0.001) {
+    for (let e = 0; e < field.semanticEdgeCount && count < out.capacity; e += 1) {
+      out.pairs[count * 2] = field.semanticEdges[e * 2];
+      out.pairs[count * 2 + 1] = field.semanticEdges[e * 2 + 1];
+      out.kind[count * 2] = 1;
+      out.kind[count * 2 + 1] = 1;
+      count += 1;
+    }
+  }
+
   out.count = count;
   refreshEdgePositions(field, key, out);
 }
@@ -247,12 +258,12 @@ export function refreshEdgePositions(field: NodeField, key: GraphKey, out: EdgeB
     out.position[at + 5] = bz;
 
     const length = Math.hypot(bx - ax, by - ay, bz - az);
-    // Semantic edges are relationships, not distances: they do not fade with
-    // length, they only stretch. Proximity edges fade as they lengthen.
-    const w =
-      out.kind[e * 2] > 0.5
-        ? 1
-        : Math.pow(Math.max(0, 1 - length / radius), falloff);
+    // Everything fades with length, semantic edges included. A relationship is
+    // allowed a longer reach than proximity — it is routed in hops, so a hop
+    // that stretches during a morph should survive — but not an unlimited one,
+    // and never at full strength.
+    const limit = out.kind[e * 2] > 0.5 ? radius * SEMANTIC_REACH : radius;
+    const w = Math.pow(Math.max(0, 1 - length / limit), falloff);
 
     out.weight[e * 2] = w * (0.55 + field.lens[a] * 0.9);
     out.weight[e * 2 + 1] = w * (0.55 + field.lens[b] * 0.9);

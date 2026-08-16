@@ -180,37 +180,46 @@ const EDGE_PAIRS = RESEARCH_EDGES.map((e) => [NODE_INDEX.get(e.from) ?? 0, NODE_
  *  semantic edges land on the particles that were packed onto them. */
 export const GRAPH_SCALE = 1.5;
 
-/** 06 — the questions, and what connects them. Nodes are crisp here. */
+/**
+ * 06 — the questions, and what connects them.
+ *
+ * Deliberately *not* particles heaped onto the research nodes and strung along
+ * the research edges. That version was a diagram: a dozen obvious hubs joined
+ * by long straight lines, which is a picture of the data structure rather than
+ * a picture of a field of work. It also gave the node tier nothing to connect —
+ * every node was already inside a hub, so proximity had nothing to say.
+ *
+ * This is a volume first. The research topology is a bias applied to a minority
+ * of the field, strong enough that the structure is felt and weak enough that
+ * hundreds of nodes stay perceptually distinct. The meaning emerges from the
+ * field; it is not the field's armature.
+ */
 const graph: StateGenerator = ({ count, rng }, out) => {
   for (let i = 0; i < count; i += 1) {
-    if (rng() < 0.3) {
-      // clustered at a node
+    const phi = Math.acos(2 * rng() - 1);
+    const theta = rng() * Math.PI * 2;
+    // Solid-ish ball, weighted outward: an even radial distribution leaves the
+    // centre dense enough to read as a blob.
+    const r = 0.62 + 1.16 * Math.pow(rng(), 0.55);
+
+    let x = r * Math.sin(phi) * Math.cos(theta);
+    let y = r * Math.cos(phi) * 0.86;
+    let z = r * Math.sin(phi) * Math.sin(theta);
+
+    let affinity = 0;
+    if (rng() < 0.38) {
+      // Drawn toward a question, never all the way to it. The cap of 0.44 is
+      // the line between "this region of the field is about that node" and
+      // "this node is a hub".
       const n = NODE_POS[i % NODE_POS.length];
-      const s = 0.085;
-      write(
-        out,
-        i,
-        n[0] * GRAPH_SCALE + (rng() - 0.5) * s,
-        n[1] * GRAPH_SCALE + (rng() - 0.5) * s,
-        n[2] * GRAPH_SCALE + (rng() - 0.5) * s,
-        0.55 + rng() * 0.8,
-      );
-    } else {
-      // travelling along an edge
-      const [a, b] = EDGE_PAIRS[i % EDGE_PAIRS.length];
-      const A = NODE_POS[a];
-      const B = NODE_POS[b];
-      const t = rng();
-      const j = 0.028;
-      write(
-        out,
-        i,
-        (A[0] + (B[0] - A[0]) * t) * GRAPH_SCALE + (rng() - 0.5) * j,
-        (A[1] + (B[1] - A[1]) * t) * GRAPH_SCALE + (rng() - 0.5) * j,
-        (A[2] + (B[2] - A[2]) * t) * GRAPH_SCALE + (rng() - 0.5) * j,
-        0.16 + 0.24 * Math.sin(t * Math.PI),
-      );
+      const pull = 0.16 + rng() * 0.28;
+      x += (n[0] * GRAPH_SCALE - x) * pull;
+      y += (n[1] * GRAPH_SCALE - y) * pull;
+      z += (n[2] * GRAPH_SCALE - z) * pull;
+      affinity = pull;
     }
+
+    write(out, i, x, y, z, 0.16 + affinity * 0.8 + Math.pow(rng(), 2) * 0.5);
   }
 };
 

@@ -48,7 +48,7 @@ export function makeFrame(): NarrativeFrame {
     stateAIndex: 0,
     stateBIndex: 0,
     blend: 0,
-    camera: { yaw: 0, pitch: 0, distance: 4, offset: [0, 0], dimensionality: 0, drift: 0 },
+    camera: { yaw: 0, pitch: 0, distance: 4, fill: 0.7, offset: [0, 0], dimensionality: 0, drift: 0 },
     palette: { core: [0, 0, 0], accent: [0, 0, 0], density: 1 },
     interaction: { pointerStrength: 0, pointerRadius: 0.5, turbulence: 0, arc: 0, spread: 0.5 },
     graph: {
@@ -103,6 +103,7 @@ export function sample(progress: number, out: NarrativeFrame = scratch): Narrati
   out.camera.yaw = lerp(KA.camera.yaw, KB.camera.yaw, blend);
   out.camera.pitch = lerp(KA.camera.pitch, KB.camera.pitch, blend);
   out.camera.distance = lerp(KA.camera.distance, KB.camera.distance, blend);
+  out.camera.fill = lerp(KA.camera.fill, KB.camera.fill, blend);
   out.camera.offset[0] = lerp(KA.camera.offset[0], KB.camera.offset[0], blend);
   out.camera.offset[1] = lerp(KA.camera.offset[1], KB.camera.offset[1], blend);
   out.camera.dimensionality = lerp(KA.camera.dimensionality, KB.camera.dimensionality, blend);
