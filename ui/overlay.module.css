@@ -1110,6 +1110,7 @@
 
 .heroName {
   max-width: 100%;
+  overflow: visible;
   overflow-wrap: anywhere;
 }
 
@@ -1156,7 +1157,6 @@
 
 .sectionField {
   align-self: start;
-  min-height: clamp(16rem, 30vw, 30rem);
   position: relative;
 }
 
@@ -1215,7 +1215,6 @@
 }
 
 .contactInner {
-  background: rgba(8, 9, 9, 0.94);
   max-width: var(--content-max);
   padding: clamp(8px, 1.5vw, 24px) 0;
 }
@@ -1246,7 +1245,6 @@
   }
 
   .sectionField {
-    min-height: clamp(14rem, 48vw, 24rem);
     order: 2;
   }
 

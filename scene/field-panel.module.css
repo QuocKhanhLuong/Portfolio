@@ -1,5 +1,5 @@
 .fieldPanel {
-  min-height: clamp(16rem, 32vw, 30rem);
+  min-height: clamp(22rem, 42vw, 42rem);
   min-width: 0;
   position: relative;
   width: 100%;
@@ -22,6 +22,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fieldPanel {
-    min-height: clamp(14rem, 28vw, 24rem);
+    min-height: clamp(16rem, 38vw, 30rem);
+  }
+}
+
+@media (max-width: 1023px) {
+  .fieldPanel {
+    min-height: clamp(16rem, 58vw, 28rem);
   }
 }

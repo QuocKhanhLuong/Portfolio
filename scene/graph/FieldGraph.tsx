@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import type { SceneState } from '@/content/types';
 import { scrollState, useNarrative } from '@/lib/narrative/store';
+import { MORPH } from '../morph/core';
 import { FIELD_EDGE_OPACITY, FIELD_NODE_COUNT, FIELD_POINT_SIZE, getField, type Field } from './fieldTargets';
 
 const NODE_COLOR = '#ECE9E1';
@@ -83,7 +84,10 @@ function updateRuntime(
     targetPoint.lerp(desired, reducedMotion ? 1 : 0.1);
 
     const phase = field.phases[index];
-    const spread = 0.05 + energy * 0.08;
+    const seed = field.directionHash[index];
+    const magnitude = field.magnitudeHash[index];
+    const motionScale = reducedMotion ? 0 : 1;
+    const spread = reducedMotion ? 0 : 0.05 + energy * 0.08;
     const drift = reducedMotion ? 0 : 0.06 + field.magnitudeHash[index] * 0.08;
     const cloudWeight = 0.18;
     const shapeWeight = 1 - cloudWeight;
@@ -91,16 +95,29 @@ function updateRuntime(
     const cloudY = field.seed[index].y * 0.62 + Math.cos(runtime.time * 0.38 + phase * 1.2) * spread;
     const cloudZ = field.seed[index].z * 0.62 + Math.sin(runtime.time * 0.34 + phase * 0.8) * spread;
 
+    // Stable, per-node wandering keeps the readable target intact while making
+    // the graph visibly alive at rest. Different rates and seeded phases avoid
+    // synchronized breathing or noise-like jitter.
+    const orbitRadius = motionScale * MORPH.driftAmount * (1.7 + magnitude * 2.1);
+    const orbitX = Math.cos(runtime.time * MORPH.orbitRate * (8 + seed * 6) + phase) * orbitRadius;
+    const orbitY = Math.sin(runtime.time * MORPH.orbitRate * (6.5 + magnitude * 5) + phase * 1.37) * orbitRadius * 0.82;
+    const orbitZ = Math.sin(runtime.time * MORPH.orbitRate * (4.5 + seed * 4) + phase * 0.73) * orbitRadius * 0.62;
+    const ambient = motionScale * (MORPH.ambientBase + MORPH.ambientTurbulence * (0.022 + magnitude * 0.018));
+    const ambientX = Math.sin(runtime.time * 0.5 + phase * 2.1) * ambient;
+    const ambientY = Math.cos(runtime.time * 0.42 + phase * 1.7) * ambient;
+    const ambientZ = Math.sin(runtime.time * 0.31 + phase * 1.3) * ambient;
+
     const pointerDistance = Math.hypot(pointerX - targetPoint.x * 0.45, pointerY - targetPoint.y * 0.45);
     const pointerFalloff = reducedMotion ? 0 : clamp(1 - pointerDistance / 0.95, 0, 1);
     const pointerDirection = field.directionHash[index] * Math.PI * 2;
     const pointerPush = pointerFalloff * pointerFalloff * (0.08 + energy * 0.18);
 
     runtime.positions[offset] =
-      cloudX * cloudWeight + targetPoint.x * shapeWeight + Math.cos(pointerDirection) * pointerPush;
+      cloudX * cloudWeight + targetPoint.x * shapeWeight + orbitX + ambientX + Math.cos(pointerDirection) * pointerPush;
     runtime.positions[offset + 1] =
-      cloudY * cloudWeight + targetPoint.y * shapeWeight + Math.sin(pointerDirection) * pointerPush;
-    runtime.positions[offset + 2] = cloudZ * cloudWeight + targetPoint.z * shapeWeight + Math.sin(runtime.time + phase) * drift * 0.04;
+      cloudY * cloudWeight + targetPoint.y * shapeWeight + orbitY + ambientY + Math.sin(pointerDirection) * pointerPush;
+    runtime.positions[offset + 2] =
+      cloudZ * cloudWeight + targetPoint.z * shapeWeight + orbitZ + ambientZ + Math.sin(runtime.time + phase) * drift * 0.04;
   }
 
   (runtime.pointGeometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
@@ -121,7 +138,7 @@ function updateRuntime(
   const panelDrift = reducedMotion ? 0 : Math.sin(progress * Math.PI * 2 + stateIndex * 0.8) * 0.16;
   let targetX = 0;
   let targetY = panelDrift;
-  let scale = camera.aspect > 1 ? 1 : 0.84;
+  let scale = camera.aspect > 1 ? 1 : 0.9;
 
   if (placement === 'hero') {
     const viewportHalfHeight = camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));

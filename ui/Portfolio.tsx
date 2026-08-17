@@ -155,23 +155,20 @@ export function Portfolio() {
       // arrive as a short stagger underneath them.
       const buildMaskedHeadings = () => {
         root.querySelectorAll<HTMLElement>('[data-motion="mask"]').forEach((heading) => {
+          if (heading.closest('[data-hero]')) return;
           const split = splitLines(heading, styles.lineMask, styles.lineInner);
           if (!split) return;
           splits.push(split);
 
-          const isHero = !!heading.closest('[data-hero]');
           gsap.fromTo(
             split.lines,
             { yPercent: 108 },
             {
               yPercent: 0,
-              duration: isHero ? MOTION_DURATIONS.scene : MOTION_DURATIONS.reveal,
+              duration: MOTION_DURATIONS.reveal,
               ease: MOTION_EASES.emphasized,
               stagger: 0.075,
-              delay: isHero ? 0.12 : 0,
-              scrollTrigger: isHero
-                ? undefined
-                : { trigger: heading, start: 'top 88%', once: true },
+              scrollTrigger: { trigger: heading, start: 'top 88%', once: true },
             },
           );
         });
@@ -202,6 +199,22 @@ export function Portfolio() {
           clearProps: 'transform',
         },
       );
+
+      const heroTitle = root.querySelector<HTMLElement>('[data-motion="hero-title"]');
+      if (heroTitle) {
+        gsap.fromTo(
+          heroTitle,
+          { autoAlpha: 0, y: 18 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: MOTION_DURATIONS.scene,
+            ease: MOTION_EASES.emphasized,
+            delay: 0.12,
+            clearProps: 'transform',
+          },
+        );
+      }
 
       root.querySelectorAll<HTMLElement>('[data-motion="fade"]').forEach((element) => {
         gsap.fromTo(
@@ -331,7 +344,7 @@ export function Portfolio() {
             <p className={styles.eyebrow} data-motion="hero">
               {INTRO.eyebrow}
             </p>
-            <h1 className={`${styles.heroName} display`} id="intro-title" data-motion="mask">
+            <h1 className={`${styles.heroName} display`} id="intro-title" data-motion="hero-title">
               {INTRO.title}
             </h1>
             <p className={styles.positioning} data-motion="hero">
