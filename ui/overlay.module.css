@@ -476,7 +476,6 @@
 }
 
 .sectionHeader {
-  background: transparent;
   display: grid;
   gap: 32px;
   grid-template-columns: minmax(9rem, 0.26fr) minmax(0, 1fr);
