@@ -1,11 +1,11 @@
-.heroField {
+.portfolioScene {
   inset: 0;
   pointer-events: none;
-  position: absolute;
+  position: fixed;
   z-index: 0;
 }
 
-.heroField canvas {
+.portfolioScene canvas {
   display: block;
   height: 100% !important;
   width: 100% !important;

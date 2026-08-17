@@ -1,4 +1,14 @@
-import { SCENE_STATES, type SceneState } from '@/content/types';
+import type { SceneState } from '@/content/types';
+
+/** Only section-level states belong on the scroll axis. */
+const SCENE_ANCHOR_STATES: SceneState[] = [
+  'signal',
+  'pixel',
+  'features',
+  'uncertainty',
+  'graph',
+  'constellation',
+];
 
 /**
  * Where each scene state sits on the scroll axis.
@@ -13,8 +23,6 @@ import { SCENE_STATES, type SceneState } from '@/content/types';
 
 export interface SceneAnchor {
   state: SceneState;
-  /** Index into SCENE_STATES — used directly as a shader state selector. */
-  stateIndex: number;
   /** Global scroll progress, 0–1. */
   progress: number;
   /** Start of the outgoing morph window, expressed on the global scroll axis. */
@@ -36,7 +44,6 @@ const TRANSITION_END_RATIO = 0.65;
 
 const anchor = (state: SceneState, progress: number): SceneAnchor => ({
   state,
-  stateIndex: SCENE_STATES.indexOf(state),
   progress,
   transitionStart: progress,
   transitionEnd: progress,
@@ -60,12 +67,12 @@ const applyTransitionWindows = (list: SceneAnchor[]): SceneAnchor[] => {
 };
 
 /**
- * Used before the first measurement (and on the server): the ten states spread
- * evenly. Replaced on mount by the real DOM layout.
+ * Used before the first measurement (and on the server): the section states
+ * spread evenly. Replaced on mount by the real DOM layout.
  */
 const FALLBACK: SceneAnchor[] = applyTransitionWindows(
-  SCENE_STATES.map((state, i) =>
-    anchor(state, SCENE_STATES.length === 1 ? 0.5 : i / (SCENE_STATES.length - 1)),
+  SCENE_ANCHOR_STATES.map((state, i) =>
+    anchor(state, SCENE_ANCHOR_STATES.length === 1 ? 0.5 : i / (SCENE_ANCHOR_STATES.length - 1)),
   ),
 );
 
@@ -74,7 +81,7 @@ let anchors: SceneAnchor[] = FALLBACK;
 export const sceneAnchors = (): SceneAnchor[] => anchors;
 
 function isSceneState(value: string | undefined): value is SceneState {
-  return !!value && (SCENE_STATES as string[]).includes(value);
+  return !!value && (SCENE_ANCHOR_STATES as string[]).includes(value);
 }
 
 /**

@@ -1088,11 +1088,6 @@
   .section:not(.hero):not(.contactSection) {
     padding-block: clamp(112px, 10vw, 160px);
   }
-
-  .sectionLayout > .sectionField {
-    position: sticky;
-    top: calc(var(--chrome-offset) + 2rem);
-  }
 }
 
 .heroGrid {
@@ -1135,11 +1130,6 @@
   min-width: 0;
 }
 
-.layoutLeft .sectionField {
-  grid-column: 1 / span 5;
-  grid-row: 1;
-}
-
 .layoutLeft .sectionContent {
   grid-column: 6 / -1;
   grid-row: 1;
@@ -1148,16 +1138,6 @@
 .layoutRight .sectionContent {
   grid-column: 1 / span 7;
   grid-row: 1;
-}
-
-.layoutRight .sectionField {
-  grid-column: 8 / -1;
-  grid-row: 1;
-}
-
-.sectionField {
-  align-self: start;
-  position: relative;
 }
 
 .aboutGrid {
@@ -1236,24 +1216,14 @@
     row-gap: 36px;
   }
 
-  .layoutLeft .sectionField,
   .layoutLeft .sectionContent,
-  .layoutRight .sectionField,
   .layoutRight .sectionContent {
     grid-column: 1;
     grid-row: auto;
   }
 
-  .sectionField {
-    order: 2;
-  }
-
   .sectionContent {
     order: 1;
-  }
-
-  .sectionLayout > .sectionField {
-    order: 2;
   }
 }
 

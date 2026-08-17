@@ -11,8 +11,7 @@ import { PROJECTS } from '@/content/projects';
 import { RESEARCH_NODES } from '@/content/research';
 import type { SceneState } from '@/content/types';
 import { setSceneFocus } from '@/lib/narrative/store';
-import { FieldPanel } from '@/scene/FieldPanel';
-import { HeroField } from '@/scene/HeroField';
+import { HeroParticles } from '@/scene/HeroParticles';
 import { splitLines, type SplitLines } from './lines';
 import styles from './overlay.module.css';
 
@@ -367,14 +366,13 @@ export function Portfolio() {
               </p>
             </div>
           </div>
-          <HeroField />
+          <HeroParticles />
         </div>
       </section>
 
       <section className={styles.section} id="about" aria-labelledby="about-title" data-scene="pixel">
         <div className={styles.sectionInner}>
           <div className={`${styles.sectionLayout} ${styles.layoutLeft}`}>
-            <FieldPanel state="pixel" align="left" className={styles.sectionField} />
             <div className={styles.sectionContent}>
               <SectionHeading
                 number="01"
@@ -463,7 +461,6 @@ export function Portfolio() {
                 ))}
               </div>
             </div>
-            <FieldPanel state="features" align="right" className={styles.sectionField} />
           </div>
         </div>
       </section>
@@ -471,7 +468,6 @@ export function Portfolio() {
       <section className={styles.section} id="research" aria-labelledby="research-title" data-scene="uncertainty">
         <div className={styles.sectionInner}>
           <div className={`${styles.sectionLayout} ${styles.layoutLeft}`}>
-            <FieldPanel state="uncertainty" align="left" className={styles.sectionField} />
             <div className={styles.sectionContent}>
               <SectionHeading
                 number="03"
@@ -585,7 +581,6 @@ export function Portfolio() {
                 </div>
               </div>
             </div>
-            <FieldPanel state="graph" align="right" className={styles.sectionField} />
           </div>
         </div>
       </section>

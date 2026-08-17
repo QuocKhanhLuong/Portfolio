@@ -6,11 +6,12 @@ import { useNarrative } from '@/lib/narrative/store';
 import { detectTier } from '@/lib/perf';
 import { SiteHeader, ProgressLine, ScrollCue } from './Chrome';
 import { Portfolio } from './Portfolio';
+import { PortfolioScene } from '@/scene/PortfolioScene';
 
 /**
- * The page shell owns one scroll driver and a readable portfolio. Each section
- * owns a demand-driven field panel; the foreground remains ordinary,
- * navigable document content.
+ * The page shell owns one scroll driver, one persistent main scene, and a
+ * readable portfolio. The foreground remains ordinary, navigable document
+ * content; section visuals are states of the shared scene, not DOM widgets.
  */
 export function Narrative() {
   const setReducedMotion = useNarrative((s) => s.setReducedMotion);
@@ -35,6 +36,7 @@ export function Narrative() {
       <SiteHeader />
       <ProgressLine />
       <ScrollCue />
+      <PortfolioScene />
       <Portfolio />
     </>
   );

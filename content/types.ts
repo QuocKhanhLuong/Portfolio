@@ -6,8 +6,9 @@
  */
 
 /**
- * The ten states the motif field passes through. Sections and project rows
- * anchor themselves to these by name; see `lib/narrative/sceneMap.ts`.
+ * Semantic labels used by content hover/focus affordances. The persistent
+ * section scene has its own four visual modes; these labels never create
+ * additional scroll anchors.
  */
 export type SceneState =
   | 'signal'
@@ -20,17 +21,3 @@ export type SceneState =
   | 'uncertainty'
   | 'graph'
   | 'constellation';
-
-export const SCENE_STATES: SceneState[] = [
-  'signal',
-  'pixel',
-  'image',
-  'features',
-  'cloud',
-  'volume',
-  'human',
-  'uncertainty',
-  'graph',
-  'constellation',
-];
-

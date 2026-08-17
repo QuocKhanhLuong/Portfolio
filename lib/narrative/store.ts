@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SCENE_STATES, type SceneState } from '@/content/types';
+import type { SceneState } from '@/content/types';
 
 /**
  * Two tiers of state, deliberately.
@@ -24,8 +24,6 @@ export const scrollState = {
   pointerY: 0,
   /** Short-lived field movement energy, capped at .85 and released at .96/frame. */
   pointerEnergy: 0,
-  /** Scene state temporarily requested by a focused foreground item. */
-  focusState: 0,
   /** Current and target blend for the focused scene state. */
   focusStrength: 0,
   focusTargetStrength: 0,
@@ -47,10 +45,6 @@ export function setSceneFocus(state: SceneState | null) {
     return;
   }
 
-  const index = SCENE_STATES.indexOf(state);
-  if (index < 0) return;
-
-  scrollState.focusState = index;
   scrollState.focusTargetStrength = FOCUS_STRENGTH;
 }
 
@@ -61,26 +55,16 @@ interface NarrativeStore {
   sceneIndex: number;
   reducedMotion: boolean;
   tier: PerfTier;
-  /** Fraction of the particle buffer currently drawn, trimmed under load. */
-  activeFraction: number;
-  webglFailed: boolean;
   setSceneIndex: (i: number) => void;
   setReducedMotion: (v: boolean) => void;
   setTier: (t: PerfTier) => void;
-  setActiveFraction: (v: number) => void;
-  setWebglFailed: (v: boolean) => void;
 }
 
 export const useNarrative = create<NarrativeStore>((set) => ({
   sceneIndex: 0,
   reducedMotion: false,
   tier: 'mid',
-  activeFraction: 1,
-  webglFailed: false,
   setSceneIndex: (i) => set((s) => (s.sceneIndex === i ? s : { sceneIndex: i })),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setTier: (tier) => set({ tier }),
-  setActiveFraction: (activeFraction) =>
-    set((s) => (Math.abs(s.activeFraction - activeFraction) < 0.02 ? s : { activeFraction })),
-  setWebglFailed: (webglFailed) => set({ webglFailed }),
 }));

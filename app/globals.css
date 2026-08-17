@@ -13,7 +13,7 @@
   --sans: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --mono: var(--font-mono), ui-monospace, 'SF Mono', Menlo, monospace;
 
-  /* Shared editorial spacing keeps the DOM and contained field panels aligned. */
+  /* Shared editorial spacing keeps the DOM rhythm aligned with the scene. */
   --gutter: clamp(24px, 4vw, 48px);
   --content-max: 87.5rem;
   --measure: 42rem;
