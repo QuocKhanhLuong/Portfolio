@@ -12,11 +12,10 @@ import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from 'next/font/google';
  */
 export const serif = Newsreader({
   subsets: ['latin', 'latin-ext', 'vietnamese'],
-  axes: ['opsz'],
+  weight: ['300', '400', '500'],
+  style: ['normal', 'italic'],
   display: 'swap',
   variable: '--font-serif',
-  // Next has no metric overrides for Newsreader; declare the fallback stack
-  // explicitly rather than let it guess and warn on every build.
   adjustFontFallback: false,
   fallback: ['Georgia', 'Times New Roman', 'serif'],
 });
@@ -29,8 +28,8 @@ export const sans = IBM_Plex_Sans({
 });
 
 export const mono = IBM_Plex_Mono({
-  subsets: ['latin', 'latin-ext'],
-  weight: ['400'],
+  subsets: ['latin', 'latin-ext', 'vietnamese'],
+  weight: ['400', '500'],
   display: 'swap',
   variable: '--font-mono',
 });

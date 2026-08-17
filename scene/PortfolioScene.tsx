@@ -11,8 +11,10 @@ import { getMainTargets, type MainTargets } from './main/targets';
 import styles from './portfolio-scene.module.css';
 
 const POINT_VERTEX = /* glsl */ `
-  attribute vec3 a_base;
+  attribute vec3 position;
   attribute vec3 a_about;
+  attribute vec3 a_about_features;
+  attribute float a_about_importance;
   attribute vec3 a_work;
   attribute vec3 a_research;
   attribute vec3 a_experience;
@@ -35,7 +37,10 @@ const POINT_VERTEX = /* glsl */ `
   varying float v_alpha;
 
   vec3 targetFor(float state) {
-    if (state < 0.5) return a_about;
+    if (state < 0.5) {
+      float featureStage = smoothstep(0.56, 0.96, u_about_progress);
+      return mix(a_about, a_about_features, featureStage);
+    }
     if (state < 1.5) return a_work;
     if (state < 2.5) return a_research;
     return a_experience;
@@ -72,7 +77,11 @@ const POINT_VERTEX = /* glsl */ `
     // ABOUT reads as a scan: the moving band is a shading event, not a second
     // scene anchor. WORK gains dimensionality as its reconstructed structure
     // settles; RESEARCH keeps slice/depth uncertainty visible at rest.
-    float scan = about * (1.0 - smoothstep(0.025, 0.14, abs(point.y - (u_about_progress * 2.0 - 1.0))));
+    float scanY = mix(0.52, -0.52, smoothstep(0.08, 0.62, u_about_progress));
+    float scan = about * (1.0 - smoothstep(0.025, 0.12, abs(a_about.y - scanY)));
+    float selectedResponse = max(scan, a_about_importance);
+    float importanceFade = smoothstep(0.52, 0.9, u_about_progress);
+    float pixelVisibility = mix(1.0, max(0.025, a_about_importance), importanceFade);
     point.x += scan * sin(point.y * 32.0 + u_time * 0.7 + a_phase) * 0.012;
     point.z += work * sin(u_time * 0.23 + a_phase * 1.7) * 0.018;
     point.z += research * sin(u_time * (0.3 + a_seed * 0.2) + point.x * 5.0) * 0.045;
@@ -84,8 +93,8 @@ const POINT_VERTEX = /* glsl */ `
     vec4 modelPosition = modelViewMatrix * vec4(point, 1.0);
     gl_Position = projectionMatrix * modelPosition;
     gl_PointSize = u_point_size * u_pixel_ratio * (4.2 / max(1.0, -modelPosition.z));
-    v_accent = clamp(a_accent + research * 0.18 + experience * 0.08, 0.0, 1.0);
-    v_alpha = 0.54 + a_seed * 0.36 + scan * 0.22 + experience * 0.12;
+    v_accent = clamp(a_accent + selectedResponse * 0.22 + research * 0.18 + experience * 0.08, 0.0, 1.0);
+    v_alpha = (0.54 + a_seed * 0.36 + selectedResponse * 0.28 + experience * 0.12) * pixelVisibility;
   }
 `;
 
@@ -162,6 +171,8 @@ interface MainSceneSample {
   side: number;
   researchWeight: number;
   experienceWeight: number;
+  aboutProgress: number;
+  aboutFeatureWeight: number;
 }
 
 function smoothstep(edge0: number, edge1: number, value: number) {
@@ -183,18 +194,53 @@ function resolveMainScene(progress: number): MainSceneSample {
     .filter((item): item is typeof item & { anchor: NonNullable<typeof item.anchor> } => Boolean(item.anchor));
 
   if (!mainAnchors.length) {
-    return { sceneA: 0, sceneB: 0, blend: 0, opacity: 0, side: -1, researchWeight: 0, experienceWeight: 0 };
+    return {
+      sceneA: 0,
+      sceneB: 0,
+      blend: 0,
+      opacity: 0,
+      side: -1,
+      researchWeight: 0,
+      experienceWeight: 0,
+      aboutProgress: 0,
+      aboutFeatureWeight: 0,
+    };
   }
 
+  const aboutAnchor = mainAnchors.find((item) => item.mode === 0);
+  const workAnchor = mainAnchors.find((item) => item.mode === 1);
+  const aboutProgress = aboutAnchor && workAnchor
+    ? Math.max(0, Math.min(1, (progress - aboutAnchor.anchor.progress) / Math.max(0.0001, workAnchor.anchor.progress - aboutAnchor.anchor.progress)))
+    : 0;
   const first = mainAnchors[0].anchor;
   const last = mainAnchors[mainAnchors.length - 1].anchor;
   if (progress < first.progress) {
     const opacity = smoothstep(first.progress - 0.16, first.progress - 0.015, progress);
-    return { sceneA: 0, sceneB: 0, blend: 0, opacity, side: -1, researchWeight: 0, experienceWeight: 0 };
+    return {
+      sceneA: 0,
+      sceneB: 0,
+      blend: 0,
+      opacity,
+      side: -1,
+      researchWeight: 0,
+      experienceWeight: 0,
+      aboutProgress: 0,
+      aboutFeatureWeight: 0,
+    };
   }
   if (progress >= last.progress) {
     const opacity = 1 - smoothstep(last.progress, Math.min(1, last.progress + 0.14), progress);
-    return { sceneA: 3, sceneB: 3, blend: 0, opacity, side: 0, researchWeight: 0, experienceWeight: opacity };
+    return {
+      sceneA: 3,
+      sceneB: 3,
+      blend: 0,
+      opacity,
+      side: 0,
+      researchWeight: 0,
+      experienceWeight: opacity,
+      aboutProgress: 1,
+      aboutFeatureWeight: 0,
+    };
   }
 
   let current = mainAnchors[0];
@@ -205,7 +251,12 @@ function resolveMainScene(progress: number): MainSceneSample {
       next = mainAnchors[index + 1];
     }
   }
-  const blend = smoothstep(current.anchor.transitionStart, current.anchor.transitionEnd, progress);
+  const anchorBlend = smoothstep(current.anchor.transitionStart, current.anchor.transitionEnd, progress);
+  // ABOUT gets its complete pixel-to-feature read before the high-level handoff
+  // to WORK begins, so the feature constellation is actually visible.
+  const blend = current.mode === 0 && next.mode === 1
+    ? smoothstep(0.82, 0.99, aboutProgress)
+    : anchorBlend;
   const side = current.side + (next.side - current.side) * blend;
   const researchWeight = current.mode === 2
     ? 1 - blend
@@ -217,6 +268,11 @@ function resolveMainScene(progress: number): MainSceneSample {
     : next.mode === 3
       ? blend
       : 0;
+  const aboutFeatureWeight = current.mode === 0
+    ? smoothstep(0.56, 0.96, aboutProgress) * (1 - blend)
+    : next.mode === 0
+      ? smoothstep(0.56, 0.96, aboutProgress) * blend
+      : 0;
   return {
     sceneA: current.mode,
     sceneB: next.mode,
@@ -225,6 +281,8 @@ function resolveMainScene(progress: number): MainSceneSample {
     side,
     researchWeight,
     experienceWeight,
+    aboutProgress,
+    aboutFeatureWeight,
   };
 }
 
@@ -250,6 +308,8 @@ function MainField({ targets, reducedMotion }: { targets: MainTargets; reducedMo
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(targets.base, 3));
     geometry.setAttribute('a_about', new THREE.BufferAttribute(targets.about, 3));
+    geometry.setAttribute('a_about_features', new THREE.BufferAttribute(targets.aboutFeatures, 3));
+    geometry.setAttribute('a_about_importance', new THREE.BufferAttribute(targets.aboutImportance, 1));
     geometry.setAttribute('a_work', new THREE.BufferAttribute(targets.work, 3));
     geometry.setAttribute('a_research', new THREE.BufferAttribute(targets.research, 3));
     geometry.setAttribute('a_experience', new THREE.BufferAttribute(targets.experience, 3));
@@ -360,10 +420,12 @@ function MainField({ targets, reducedMotion }: { targets: MainTargets; reducedMo
     pointsMaterial.uniforms.u_pointer.value.set(scrollState.pointerX, scrollState.pointerY);
     pointsMaterial.uniforms.u_pointer_energy.value = reducedMotion ? 0 : scrollState.pointerEnergy;
     pointsMaterial.uniforms.u_focus.value = reducedMotion ? 0 : scrollState.focusStrength;
-    pointsMaterial.uniforms.u_about_progress.value = Math.min(1, scrollState.progress * 4.2);
+    pointsMaterial.uniforms.u_about_progress.value = sample.aboutProgress;
     pointsMaterial.uniforms.u_research_weight.value = sample.researchWeight;
     pointsMaterial.uniforms.u_opacity.value = sample.opacity;
-    linesMaterial.uniforms.u_opacity.value = sample.opacity * (0.035 + sample.experienceWeight * 0.42);
+    linesMaterial.uniforms.u_opacity.value = sample.opacity * (
+      0.035 + sample.aboutFeatureWeight * 0.42 + sample.experienceWeight * 0.42
+    );
   });
 
   return (

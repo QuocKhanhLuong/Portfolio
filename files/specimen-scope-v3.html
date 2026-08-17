@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Specimen Scope — direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#0C0E0D; --ink:#E7E4D8; --ink-dim:#8A8F88; --ink-faint:#565B57;
+    --hairline:rgba(231,228,216,0.10); --hairline-2:rgba(231,228,216,0.18);
+    --phosphor:#E4A54A; --phosphor-dim:rgba(228,165,74,0.16); --trace:#6C9C93; --live:#D2553C;
+    --serif:'Newsreader',Georgia,serif; --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --gutter:clamp(18px,3.5vw,44px);
+    --e-std:cubic-bezier(0.4,0,0.2,1); --e-emph:cubic-bezier(0.16,1,0.3,1);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  ::selection{background:var(--phosphor-dim)}
+  a{color:inherit;text-decoration:none}
+  :focus-visible{outline:2px solid var(--phosphor);outline-offset:3px}
+
+  /* ── full-screen field, fixed behind everything ── */
+  #scope{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 50%, transparent 40%, rgba(12,14,13,0.55) 100%);}
+
+  /* ── viewfinder HUD, fixed at screen edges (never around content) ── */
+  .hud{position:fixed;inset:0;z-index:4;pointer-events:none;font-family:var(--mono)}
+  .hud .cnr{position:absolute;width:26px;height:26px;border:1px solid var(--hairline-2)}
+  .hud .cnr.tl{top:18px;left:18px;border-right:0;border-bottom:0}
+  .hud .cnr.tr{top:18px;right:18px;border-left:0;border-bottom:0}
+  .hud .cnr.bl{bottom:18px;left:18px;border-right:0;border-top:0}
+  .hud .cnr.br{bottom:18px;right:18px;border-left:0;border-top:0}
+  .hud .top{position:absolute;top:22px;left:0;right:0;display:flex;justify-content:center;gap:1.5rem;
+    font-size:0.62rem;letter-spacing:0.24em;text-transform:uppercase;color:var(--ink-faint)}
+  .hud .top b{color:var(--phosphor);font-weight:500}
+  .hud .lft,.hud .rgt{position:absolute;top:50%;font-size:0.58rem;letter-spacing:0.2em;color:var(--ink-faint);text-transform:uppercase;transform-origin:center}
+  .hud .lft{left:26px;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl}
+  .hud .rgt{right:26px;transform:translateY(-50%);writing-mode:vertical-rl}
+  /* center reticle — the focus point the whole page reads through */
+  .hud .reticle{position:absolute;top:50%;left:50%;width:11px;height:11px;transform:translate(-50%,-50%);opacity:0.5}
+  .hud .reticle::before,.hud .reticle::after{content:"";position:absolute;background:var(--phosphor)}
+  .hud .reticle::before{left:50%;top:0;width:1px;height:100%;transform:translateX(-0.5px)}
+  .hud .reticle::after{top:50%;left:0;height:1px;width:100%;transform:translateY(-0.5px)}
+  .hud .rec{width:6px;height:6px;border-radius:50%;background:var(--live);position:absolute;top:24px;right:54px;animation:rec 2.4s infinite}
+  @keyframes rec{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* ── nav ── */
+  .nav{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:center;gap:1.75rem;padding:20px;
+    font-family:var(--mono);font-size:0.66rem;letter-spacing:0.18em;text-transform:uppercase}
+  .nav a{color:var(--ink-dim);position:relative;padding:4px 0;transition:color .16s var(--e-std)}
+  .nav a::after{content:"";position:absolute;left:0;bottom:0;height:1px;width:0;background:var(--phosphor);transition:width .16s var(--e-std)}
+  .nav a:hover{color:var(--ink)} .nav a:hover::after{width:100%}
+  .nav a.on{color:var(--phosphor)}
+
+  /* ── centered sections ── */
+  main{position:relative;z-index:3}
+  .sec{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:14vh var(--gutter);gap:1.5rem}
+  .kicker{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.24em;text-transform:uppercase;color:var(--phosphor);
+    display:flex;align-items:center;gap:0.7rem}
+  .kicker::before,.kicker::after{content:"";width:26px;height:1px;background:var(--hairline-2)}
+  .display{font-family:var(--serif);font-optical-sizing:auto;font-weight:400;letter-spacing:-0.02em;line-height:0.98;margin:0}
+
+  /* HERO */
+  .hero .display{font-size:clamp(3rem,9vw,7.5rem)}
+  .hero .lead{font-family:var(--serif);font-weight:300;font-size:clamp(1.1rem,1.8vw,1.5rem);color:var(--ink-dim);max-width:40ch;margin:0.5rem auto 0;line-height:1.5}
+  .hero .lead em{font-style:normal;color:var(--ink)}
+  .cta{display:flex;gap:1.5rem;justify-content:center;align-items:center;margin-top:1rem;flex-wrap:wrap}
+  .btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink);
+    padding:0.8rem 1.3rem;border:1px solid var(--hairline-2);background:transparent;cursor:pointer;position:relative;transition:.16s var(--e-std)}
+  .btn::before,.btn::after{content:"";position:absolute;width:6px;height:6px;border:1px solid var(--phosphor);opacity:0;transition:.16s var(--e-std)}
+  .btn::before{top:-1px;left:-1px;border-right:0;border-bottom:0} .btn::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+  .btn:hover{border-color:var(--phosphor);color:var(--phosphor)} .btn:hover::before,.btn:hover::after{opacity:1}
+  .link{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px solid var(--hairline-2);padding-bottom:3px;transition:.16s var(--e-std)}
+  .link:hover{color:var(--phosphor);border-color:var(--phosphor)}
+
+  .stitle{font-family:var(--serif);font-weight:400;font-size:clamp(1.9rem,4vw,3.2rem);line-height:1.05;letter-spacing:-0.015em;margin:0;max-width:20ch}
+  .stext{font-family:var(--sans);font-weight:300;color:var(--ink-dim);max-width:52ch;margin:0 auto;font-size:1.02rem}
+
+  /* WORK as a centred "detection log" — each row is a reading, index in phosphor */
+  .log{width:100%;max-width:62rem;margin-top:1rem;display:flex;flex-direction:column}
+  .row{display:grid;grid-template-columns:auto 1fr auto;gap:2rem;align-items:baseline;text-align:left;
+    padding:1.5rem 0;border-top:1px solid var(--hairline);position:relative;transition:.2s var(--e-std)}
+  .row::before{content:"";position:absolute;left:0;top:-1px;height:1px;width:0;background:var(--phosphor);transition:width .5s var(--e-emph)}
+  .row:hover::before{width:100%}
+  .row:hover{padding-left:0.5rem}
+  .row .ix{font-family:var(--mono);font-size:0.7rem;color:var(--ink-faint);letter-spacing:0.1em;transition:color .16s var(--e-std)}
+  .row:hover .ix{color:var(--phosphor)}
+  .row h3{font-family:var(--serif);font-weight:400;font-size:1.35rem;margin:0 0 0.25rem}
+  .row p{font-family:var(--sans);font-weight:300;font-size:0.92rem;color:var(--ink-dim);margin:0}
+  .row .meta{font-family:var(--mono);font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap;text-align:right}
+  .row .meta b{color:var(--phosphor);font-weight:500}
+
+  /* CONTACT channels centred */
+  .chan{display:flex;gap:2.5rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+  .chan a{font-family:var(--mono);font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px solid var(--hairline-2);padding-bottom:4px;transition:.16s var(--e-std)}
+  .chan a:hover{color:var(--phosphor);border-color:var(--phosphor)}
+
+  .note{position:fixed;bottom:20px;left:0;right:0;z-index:5;text-align:center;font-family:var(--mono);font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-faint);pointer-events:none}
+
+  @media(prefers-reduced-motion:reduce){.rec{animation:none}*{transition:none!important}}
+  @media(max-width:640px){.hud .lft,.hud .rgt{display:none}.row{grid-template-columns:auto 1fr;gap:1rem}.row .meta{display:none}}
+</style>
+</head>
+<body>
+
+<canvas id="scope"></canvas>
+<div class="grain"></div>
+
+<nav class="nav">
+  <a href="#hero" class="on">Index</a><a href="#about">About</a><a href="#work">Work</a><a href="#research">Research</a><a href="#contact">Contact</a>
+</nav>
+
+<div class="hud">
+  <span class="cnr tl"></span><span class="cnr tr"></span><span class="cnr bl"></span><span class="cnr br"></span>
+  <span class="rec"></span>
+  <div class="top"><span>Specimen ▸ <b id="hud-state">Signal</b></span><span id="hud-idx">00 / 05</span><span>N=350</span></div>
+  <div class="lft">Reading station · v3</div>
+  <div class="rgt" id="hud-coord">X 0.00 · Y 0.00</div>
+  <span class="reticle"></span>
+</div>
+
+<main>
+  <section class="sec hero" id="hero" data-state="signal" data-idx="00">
+    <span class="kicker">Computer vision research / engineering</span>
+    <h1 class="display">Lương&nbsp;Quốc<br>Khánh</h1>
+    <p class="lead">I read <em>visual structure</em> out of signal — 3D vision, medical imaging, representation learning.</p>
+    <div class="cta"><button class="btn">Begin reading ↓</button><a href="#contact" class="link">Get in touch ↗</a></div>
+  </section>
+
+  <section class="sec" id="about" data-state="pixel" data-idx="01">
+    <span class="kicker">01 · About</span>
+    <h2 class="stitle">What a model keeps, and what it throws away.</h2>
+    <p class="stext">I work between visual understanding and the tools that make it possible to study — interested in what a representation preserves, what it discards, and how those choices reach the people who use its output.</p>
+  </section>
+
+  <section class="sec" id="work" data-state="features" data-idx="02">
+    <span class="kicker">02 · Selected work</span>
+    <h2 class="stitle">Readings taken from the field.</h2>
+    <div class="log">
+      <div class="row" tabindex="0"><span class="ix">01</span><div><h3>Self-supervised representation learning</h3><p>Useful visual structure from less labelled data.</p></div><span class="meta">Field / <b>Features</b><br>2025</span></div>
+      <div class="row" tabindex="0"><span class="ix">02</span><div><h3>Physics-guided cardiac segmentation</h3><p>Volumetric segmentation against radiologist annotation.</p></div><span class="meta">Field / <b>Contour</b><br>CMIG · Q1</span></div>
+      <div class="row" tabindex="0"><span class="ix">03</span><div><h3>Depth from uncalibrated multi-view</h3><p>Geometric constraint kept visible, not hidden.</p></div><span class="meta">Field / <b>Cloud</b><br>In progress</span></div>
+      <div class="row" tabindex="0"><span class="ix">04</span><div><h3>Calibration under distribution shift</h3><p>When should a model decline to answer?</p></div><span class="meta">Field / <b>Uncertainty</b><br>Open</span></div>
+    </div>
+  </section>
+
+  <section class="sec" id="research" data-state="graph" data-idx="03">
+    <span class="kicker">03 · Research</span>
+    <h2 class="stitle">Questions, papers, and the links between them.</h2>
+    <p class="stext">The field behind this section is a visual index — publications as nodes, relationships as edges. The readable record stays centred here.</p>
+    <a href="#" class="link" style="margin-top:0.5rem">Visual–textual alignment for clinical reports ↗</a>
+  </section>
+
+  <section class="sec" id="contact" data-state="constellation" data-idx="04">
+    <span class="kicker">04 · Contact</span>
+    <h2 class="stitle">Open to careful questions and difficult visual problems.</h2>
+    <div class="chan"><a href="#">Email</a><a href="#">GitHub</a><a href="#">Scholar</a><a href="#">LinkedIn</a><a href="#">CV</a></div>
+  </section>
+</main>
+
+<div class="note">Scroll — the instrument refocuses on each specimen</div>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cv = document.getElementById('scope'), ctx = cv.getContext('2d');
+  let W,H,DPR,cx,cy, mx=0,my=0, pmx=0,pmy=0, vel=0;
+  const N = 460;
+  const P = []; // particles: base target + jitter phase
+  // shape generators return {x,y} in centered coords for index i of N
+  const R = () => Math.min(W,H);
+  function shape(name,i){
+    const a = (i/N)*Math.PI*2, rnd = P[i].r0, rnd2 = P[i].r1;
+    const rad = R();
+    switch(name){
+      case 'signal':{ // symmetric oscilloscope trace across center
+        const x = (i/N-0.5)*rad*1.4;
+        const u = i/N;
+        const y = (Math.sin(u*28)*0.4 + Math.sin(u*11+1.3)*0.2 + Math.sin(u*61)*0.09)*rad*0.16*(0.5+rnd);
+        return {x, y};
+      }
+      case 'pixel':{ // symmetric grid / scan matrix
+        const g=Math.round(Math.sqrt(N)); const gx=i%g, gy=(i/g|0);
+        return {x:(gx-(g-1)/2)*(rad*0.5/g), y:(gy-(g-1)/2)*(rad*0.5/g)};
+      }
+      case 'features':{ // scattered keypoints in a soft disc, symmetric
+        const r=rad*0.34*Math.sqrt(rnd); return {x:Math.cos(a+rnd2*6)*r, y:Math.sin(a+rnd2*6)*r};
+      }
+      case 'graph':{ // concentric ring nodes (radial index)
+        const ring = 0.12+0.30*((i%5)/5); return {x:Math.cos(a*3)*rad*ring, y:Math.sin(a*3)*rad*ring};
+      }
+      case 'constellation':{ // sparse still stars, wide symmetric
+        const r=rad*(0.12+0.42*rnd); return {x:Math.cos(a*7+rnd2*6)*r, y:Math.sin(a*5+rnd2*6)*r};
+      }
+      default:{ const r=rad*0.3; return {x:Math.cos(a)*r,y:Math.sin(a)*r}; }
+    }
+  }
+  let target='signal', litRatio=0.22;
+  for(let i=0;i<N;i++) P.push({x:0,y:0,tx:0,ty:0,r0:Math.random(),r1:Math.random(),ph:Math.random()*6.28,lit:Math.random()<0.22});
+  function retarget(name){ target=name; for(let i=0;i<N;i++){ const s=shape(name,i); P[i].tx=s.x; P[i].ty=s.y; } }
+
+  function resize(){ DPR=Math.min(2,devicePixelRatio||1); W=innerWidth;H=innerHeight;cx=W/2;cy=H/2;
+    cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0); retarget(target);
+    for(let i=0;i<N;i++){P[i].x=P[i].tx;P[i].y=P[i].ty;} }
+  addEventListener('resize',resize);
+  addEventListener('pointermove',e=>{ mx=e.clientX-cx; my=e.clientY-cy; });
+
+  let t=0;
+  function frame(){
+    t+=0.012;
+    vel = vel*0.9 + Math.hypot(mx-pmx,my-pmy)*0.1; pmx=mx;pmy=my;
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.translate(cx,cy);
+    const push = Math.min(1, vel*0.02);
+    for(let i=0;i<N;i++){
+      const p=P[i];
+      p.x += (p.tx-p.x)*0.06; p.y += (p.ty-p.y)*0.06;
+      const jx=Math.sin(t*0.9+p.ph)*1.6, jy=Math.cos(t*0.8+p.ph*1.2)*1.6;
+      // velocity-gated pointer repulsion (only when cursor moves)
+      let rx=0,ry=0; if(push>0.01){ const dx=p.x-mx,dy=p.y-my,d=Math.hypot(dx,dy)+0.001; const f=Math.max(0,1-d/240)*push*22; rx=dx/d*f; ry=dy/d*f; }
+      const x=p.x+jx+rx, y=p.y+jy+ry;
+      ctx.beginPath(); ctx.arc(x,y,p.lit?1.6:1,0,6.28);
+      ctx.fillStyle=p.lit?'rgba(228,165,74,0.92)':'rgba(231,228,216,0.42)'; ctx.fill();
+    }
+    ctx.restore();
+    const co=document.getElementById('hud-coord'); if(co) co.textContent='X '+(mx/cx).toFixed(2)+' · Y '+(-my/cy).toFixed(2);
+    if(!reduce) requestAnimationFrame(frame); else { /* draw once */ }
+  }
+  resize(); frame();
+
+  // section observer → retarget field + update HUD + nav
+  const secs=[...document.querySelectorAll('.sec')];
+  const navlinks=[...document.querySelectorAll('.nav a')];
+  const io=new IntersectionObserver((es)=>{es.forEach(en=>{ if(en.isIntersecting){
+    const st=en.target.dataset.state, ix=en.target.dataset.idx;
+    retarget(st);
+    document.getElementById('hud-state').textContent = st[0].toUpperCase()+st.slice(1);
+    document.getElementById('hud-idx').textContent = ix+' / 05';
+    navlinks.forEach(a=>a.classList.toggle('on', a.getAttribute('href')==='#'+en.target.id));
+  }});},{threshold:0.5});
+  secs.forEach(s=>io.observe(s));
+</script>
+</body>
+</html>

@@ -3,14 +3,14 @@ import { fontClassName } from './fonts';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Luong Quoc Khanh — Computer Vision Research & Engineering',
+  title: 'Lương Quốc Khánh — Computer Vision Research & Engineering',
   description:
-    'The portfolio of Luong Quoc Khanh: computer vision research, 3D vision, medical imaging, and research engineering.',
+    'Reading station & portfolio of Lương Quốc Khánh: computer vision research, 3D vision, medical imaging, and representation learning.',
 };
 
 export const viewport: Viewport = {
-  themeColor: '#F4F1EA',
-  colorScheme: 'light',
+  themeColor: '#0C0E0D',
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

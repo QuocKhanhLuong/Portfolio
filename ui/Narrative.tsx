@@ -4,14 +4,16 @@ import { useEffect } from 'react';
 import { startNarrativeDriver } from '@/lib/narrative/driver';
 import { useNarrative } from '@/lib/narrative/store';
 import { detectTier } from '@/lib/perf';
-import { SiteHeader, ProgressLine, ScrollCue } from './Chrome';
+import { SpecimenScope } from '@/scene/SpecimenScope';
+import { SiteHeader, ViewfinderHUD, BottomNote } from './Chrome';
 import { Portfolio } from './Portfolio';
-import { PortfolioScene } from '@/scene/PortfolioScene';
 
 /**
- * The page shell owns one scroll driver, one persistent main scene, and a
- * readable portfolio. The foreground remains ordinary, navigable document
- * content; section visuals are states of the shared scene, not DOM widgets.
+ * Specimen Scope Narrative shell:
+ * - One full-screen 1000-particle scope canvas (#scope)
+ * - Viewfinder HUD overlay (.hud) with corner brackets, live coordinates, reticle, and N=1000 readout
+ * - Centred navigation (.nav) with active section tracking
+ * - Centred specimen sections
  */
 export function Narrative() {
   const setReducedMotion = useNarrative((s) => s.setReducedMotion);
@@ -33,11 +35,11 @@ export function Narrative() {
 
   return (
     <>
+      <SpecimenScope />
+      <ViewfinderHUD />
       <SiteHeader />
-      <ProgressLine />
-      <ScrollCue />
-      <PortfolioScene />
       <Portfolio />
+      <BottomNote />
     </>
   );
 }

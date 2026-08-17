@@ -70,6 +70,48 @@ interface HeroPoint {
   accent: number;
 }
 
+// This SVG path set is the source vocabulary for the hero. It is deliberately
+// an anatomical contour with chambers and an ascending vessel, rather than a
+// generic sphere or a random cloud.
+const CARDIAC_SVG_PATHS = [
+  {
+    d: 'M 50 94 C 43 88 15 71 8 47 C 2 27 10 10 26 7 C 37 5 46 12 50 22 C 54 12 63 5 74 7 C 90 10 98 27 92 47 C 85 71 57 88 50 94 Z',
+    count: 380,
+    z: 0,
+    fill: false,
+  },
+  {
+    d: 'M 48 25 C 38 17 24 20 22 33 C 20 45 30 54 46 67 C 49 55 50 40 48 25 Z',
+    count: 90,
+    z: 0.12,
+    fill: false,
+  },
+  {
+    d: 'M 52 25 C 62 17 76 20 78 33 C 80 45 70 54 54 67 C 51 55 50 40 52 25 Z',
+    count: 90,
+    z: 0.16,
+    fill: false,
+  },
+  {
+    d: 'M 50 22 C 49 14 50 7 56 3 C 61 0 67 4 66 10 L 61 25',
+    count: 50,
+    z: 0.22,
+    fill: false,
+  },
+  {
+    d: 'M 43 68 C 47 74 52 74 57 68',
+    count: 50,
+    z: 0.18,
+    fill: false,
+  },
+  {
+    d: 'M 50 94 C 43 88 15 71 8 47 C 2 27 10 10 26 7 C 37 5 46 12 50 22 C 54 12 63 5 74 7 C 90 10 98 27 92 47 C 85 71 57 88 50 94 Z',
+    count: 100,
+    z: 0.04,
+    fill: true,
+  },
+] as const;
+
 function randomSource(seed = 0x6d2b79f5) {
   let value = seed >>> 0;
   return () => {
@@ -85,51 +127,33 @@ function createCardiacPoints(): HeroPoint[] {
   const random = randomSource();
   const points: HeroPoint[] = [];
 
-  // The outer contour uses a normalized cardiac curve rather than a generic
-  // primitive. Interior chamber arcs keep it legible as a medical/CV signal.
-  for (let index = 0; index < PARTICLE_COUNT; index += 1) {
-    const angle = (index / PARTICLE_COUNT) * Math.PI * 2;
-    const contour = index < PARTICLE_COUNT * 0.58;
-    const t = contour ? angle : random() * Math.PI * 2;
-    const sin = Math.sin(t);
-    const cos = Math.cos(t);
-    const heartX = 16 * sin * sin * sin;
-    const heartY = 13 * cos - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
-    const fill = contour ? 1 : Math.sqrt(random()) * 0.92;
-    const chamber = index % 5 === 0 ? 0.04 : 0;
-    const x = (heartX / 18) * fill + chamber;
-    const y = (heartY / 19) * fill + (random() - 0.5) * (contour ? 0.018 : 0.08);
+  const namespace = 'http://www.w3.org/2000/svg';
+  const samplePath = (pathData: string, count: number, z: number, fill: boolean) => {
+    const path = document.createElementNS(namespace, 'path');
+    path.setAttribute('d', pathData);
+    const length = path.getTotalLength();
+    if (!Number.isFinite(length) || length <= 0) return;
 
-    points.push({
-      x,
-      y,
-      z: (random() - 0.5) * (contour ? 0.08 : 0.28),
-      phase: random() * Math.PI * 2,
-      size: 0.35 + random() * 0.8,
-      accent: random(),
-    });
+    for (let index = 0; index < count; index += 1) {
+      const sample = path.getPointAtLength((index / count) * length);
+      const scale = fill ? 0.2 + Math.sqrt(random()) * 0.78 : 1;
+      points.push({
+        x: ((sample.x - 50) / 50) * scale + (random() - 0.5) * (fill ? 0.018 : 0.01),
+        y: ((50 - sample.y) / 50) * scale + (random() - 0.5) * (fill ? 0.018 : 0.01),
+        z: z + (random() - 0.5) * (fill ? 0.12 : 0.05),
+        phase: random() * Math.PI * 2,
+        size: 0.45 + random() * 0.95,
+        accent: fill ? 0.42 + random() * 0.42 : 0.48 + random() * 0.52,
+      });
+    }
+  };
+
+  CARDIAC_SVG_PATHS.forEach((path) => samplePath(path.d, path.count, path.z, path.fill));
+  while (points.length < PARTICLE_COUNT) {
+    samplePath(CARDIAC_SVG_PATHS[0].d, 1, 0.03, true);
   }
 
-  // A pair of chamber-like curves gives the silhouette a scan/feature-map
-  // vocabulary without introducing a second object or a decorative sphere.
-  const chamberCurves = [
-    { cx: -0.25, cy: 0.08, rx: 0.23, ry: 0.34 },
-    { cx: 0.23, cy: -0.05, rx: 0.2, ry: 0.3 },
-  ];
-  chamberCurves.forEach(({ cx, cy, rx, ry }, curveIndex) => {
-    for (let index = 0; index < 38; index += 1) {
-      const angle = (index / 38) * Math.PI * 2;
-      points[(curveIndex * 38 + index) % points.length] = {
-        ...points[(curveIndex * 38 + index) % points.length],
-        x: cx + Math.cos(angle) * rx,
-        y: cy + Math.sin(angle) * ry,
-        z: 0.12 + curveIndex * 0.025,
-        accent: 0.72 + curveIndex * 0.08,
-      };
-    }
-  });
-
-  return points;
+  return points.slice(0, PARTICLE_COUNT);
 }
 
 function compileShader(gl: WebGLRenderingContext, type: number, source: string) {
@@ -138,6 +162,7 @@ function compileShader(gl: WebGLRenderingContext, type: number, source: string) 
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.warn('[HeroParticles] shader compilation failed', gl.getShaderInfoLog(shader));
     gl.deleteShader(shader);
     return null;
   }
@@ -175,10 +200,16 @@ export function HeroParticles() {
       premultipliedAlpha: true,
       preserveDrawingBuffer: false,
     });
-    if (!gl) return;
+    if (!gl) {
+      console.warn('[HeroParticles] WebGL is unavailable');
+      return;
+    }
 
     const program = createProgram(gl);
-    if (!program) return;
+    if (!program) {
+      console.warn('[HeroParticles] shader program could not be created');
+      return;
+    }
 
     const points = createCardiacPoints();
     const positions = new Float32Array(points.flatMap((point) => [point.x, point.y, point.z]));

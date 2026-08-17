@@ -1,161 +1,110 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { NAV_ITEMS } from '@/content/portfolio';
-import { scrollToTop } from '@/lib/narrative/driver';
-import { subscribeFrame } from '@/lib/narrative/ticker';
+import { useEffect, useState } from 'react';
+import { SCOPE_PARTICLE_COUNT } from '@/scene/SpecimenScope';
 import styles from './overlay.module.css';
 
-export function SiteHeader() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!isMobileMenuOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsMobileMenuOpen(false);
-        menuButtonRef.current?.focus();
-      }
-    };
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isMobileMenuOpen]);
-
-  const closeMenu = () => setIsMobileMenuOpen(false);
-
-  return (
-    <header
-      className={`${styles.siteHeader} ${isMobileMenuOpen ? styles.siteHeaderMenuOpen : ''}`}
-    >
-      <a
-        className={styles.homeLink}
-        href="#top"
-        aria-label="Home"
-        onClick={(event) => {
-          event.preventDefault();
-          closeMenu();
-          scrollToTop();
-        }}
-      >
-        HOME
-      </a>
-
-      <nav className={styles.primaryNav} aria-label="Primary navigation">
-        {NAV_ITEMS.map((item) => (
-          <a key={item.href} href={item.href}>
-            {item.label}
-          </a>
-        ))}
-      </nav>
-
-      <a className={styles.headerContact} href="#contact">
-        Contact <span aria-hidden="true">↘</span>
-      </a>
-
-      <button
-        ref={menuButtonRef}
-        className={styles.menuToggle}
-        type="button"
-        aria-expanded={isMobileMenuOpen}
-        aria-controls="mobile-navigation"
-        aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-        onClick={() => setIsMobileMenuOpen((open) => !open)}
-      >
-        <span className={styles.menuToggleLabel}>{isMobileMenuOpen ? 'Close' : 'Menu'}</span>
-        <span className={`${styles.menuGlyph} ${isMobileMenuOpen ? styles.menuGlyphOpen : ''}`} aria-hidden="true">
-          <span />
-          <span />
-        </span>
-      </button>
-
-      <div
-        className={`${styles.mobileMenu} ${isMobileMenuOpen ? styles.mobileMenuOpen : ''}`}
-        id="mobile-navigation"
-        aria-label="Mobile navigation"
-      >
-        <div className={styles.mobileMenuInner}>
-          <nav className={styles.mobileMenuNav}>
-            {NAV_ITEMS.map((item, index) => (
-              <a
-                key={item.href}
-                className={styles.mobileMenuLink}
-                href={item.href}
-                tabIndex={isMobileMenuOpen ? 0 : -1}
-                onClick={closeMenu}
-                style={{ transitionDelay: isMobileMenuOpen ? `${index * 75}ms` : '0ms' }}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-
-          <div className={styles.mobileMenuActions}>
-            <a
-              className={styles.mobileMenuQuietAction}
-              href="#work"
-              tabIndex={isMobileMenuOpen ? 0 : -1}
-              onClick={closeMenu}
-            >
-              View selected work <span aria-hidden="true">↘</span>
-            </a>
-            <a
-              className={styles.mobileMenuPrimaryAction}
-              href="#contact"
-              tabIndex={isMobileMenuOpen ? 0 : -1}
-              onClick={closeMenu}
-            >
-              Get in touch <span aria-hidden="true">↘</span>
-            </a>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
+export interface NavItem {
+  href: string;
+  label: string;
+  id: string;
 }
 
-export function ProgressLine() {
-  const fill = useRef<HTMLSpanElement>(null);
+export const SPECIMEN_NAV_ITEMS: NavItem[] = [
+  { href: '#hero', label: 'Index', id: 'hero' },
+  { href: '#about', label: 'About', id: 'about' },
+  { href: '#work', label: 'Work', id: 'work' },
+  { href: '#research', label: 'Research', id: 'research' },
+  { href: '#experience', label: 'Experience', id: 'experience' },
+  { href: '#contact', label: 'Contact', id: 'contact' },
+];
 
-  useEffect(() => {
-    const element = fill.current;
-    if (!element) return;
-
-    return subscribeFrame((frame) => {
-      element.style.height = `${(frame.progress * 100).toFixed(2)}%`;
-    });
-  }, []);
-
+export function ViewfinderHUD() {
   return (
-    <div className={styles.progressLine} aria-hidden="true">
-      <span ref={fill} />
+    <div className={styles.hud} aria-hidden="true">
+      {/* 4 Corner brackets */}
+      <span className={`${styles.cnr} ${styles.cnrTl}`} />
+      <span className={`${styles.cnr} ${styles.cnrTr}`} />
+      <span className={`${styles.cnr} ${styles.cnrBl}`} />
+      <span className={`${styles.cnr} ${styles.cnrBr}`} />
+
+      {/* Pulsing REC dot */}
+      <span className={styles.rec} />
+
+      {/* Top specimen state & particle count readout */}
+      <div className={styles.hudTop}>
+        <span>
+          Specimen ▸ <b id="hud-state">Signal</b>
+        </span>
+        <span id="hud-idx">00 / 05</span>
+        <span>N={SCOPE_PARTICLE_COUNT}</span>
+      </div>
+
+      {/* Edge labels */}
+      <div className={styles.hudLft}>Reading station · v3</div>
+      <div className={styles.hudRgt} id="hud-coord">
+        X 0.00 · Y 0.00
+      </div>
+
+      {/* Exact centre reticle */}
+      <span className={styles.reticle} />
     </div>
   );
 }
 
-export function ScrollCue() {
-  const ref = useRef<HTMLDivElement>(null);
+export function SiteHeader() {
+  const [activeSection, setActiveSection] = useState('hero');
 
   useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
+    const handleScroll = () => {
+      const sections = SPECIMEN_NAV_ITEMS.map((item) => document.getElementById(item.id)).filter(
+        Boolean,
+      ) as HTMLElement[];
+      const scrollPos = window.scrollY + window.innerHeight * 0.45;
 
-    return subscribeFrame((frame) => {
-      element.style.opacity = frame.progress > 0.02 ? '0' : '1';
-    });
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (section.offsetTop <= scrollPos) {
+          setActiveSection(section.id);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <div className={styles.scrollCue} ref={ref} aria-hidden="true">
-      Scroll to explore <span>↓</span>
+    <nav className={styles.nav} aria-label="Specimen Scope Navigation">
+      {SPECIMEN_NAV_ITEMS.map((item) => {
+        const isActive = activeSection === item.id;
+        return (
+          <a
+            key={item.href}
+            href={item.href}
+            className={isActive ? styles.navOn : ''}
+            onClick={(e) => {
+              e.preventDefault();
+              const el = document.getElementById(item.id);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+          >
+            {item.label}
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function BottomNote() {
+  return (
+    <div className={styles.bottomNote} aria-hidden="true">
+      Scroll — the instrument refocuses on each specimen
     </div>
   );
 }

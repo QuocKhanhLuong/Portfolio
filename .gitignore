@@ -9,3 +9,7 @@ npm-debug.log*
 .vercel
 next-env.d.ts
 tsconfig.tsbuildinfo
+.codex
+.agenteam
+.codegraph
+.claude
