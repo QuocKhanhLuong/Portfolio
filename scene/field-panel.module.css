@@ -1,0 +1,27 @@
+.fieldPanel {
+  min-height: clamp(16rem, 32vw, 30rem);
+  min-width: 0;
+  position: relative;
+  width: 100%;
+}
+
+.fieldPanel canvas {
+  display: block;
+  height: 100% !important;
+  min-height: inherit;
+  width: 100% !important;
+}
+
+.fieldPanelLeft {
+  justify-self: stretch;
+}
+
+.fieldPanelRight {
+  justify-self: stretch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fieldPanel {
+    min-height: clamp(14rem, 28vw, 24rem);
+  }
+}
