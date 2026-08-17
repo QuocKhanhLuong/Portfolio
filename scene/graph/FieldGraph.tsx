@@ -7,11 +7,11 @@ import type { SceneState } from '@/content/types';
 import { scrollState, useNarrative } from '@/lib/narrative/store';
 import { FIELD_EDGE_OPACITY, FIELD_NODE_COUNT, FIELD_POINT_SIZE, getField, type Field } from './fieldTargets';
 
-const CAMERA_DISTANCE = 5.9;
 const NODE_COLOR = '#ECE9E1';
 const EDGE_COLOR = '#8296AA';
 const WARM_COLOR = '#C87552';
 const RESEARCH_COLOR = '#B49A65';
+const HERO_GRAPH_RADIUS = 2.35;
 
 interface FieldRuntime {
   field: Field;
@@ -65,6 +65,7 @@ function updateRuntime(
   state: SceneState,
   reducedMotion: boolean,
   pointSize: number,
+  placement: FieldPlacement,
 ) {
   const { field } = runtime;
   const progress = clamp(scrollState.progress, 0, 1);
@@ -118,10 +119,30 @@ function updateRuntime(
   (runtime.edgeGeometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
 
   const panelDrift = reducedMotion ? 0 : Math.sin(progress * Math.PI * 2 + stateIndex * 0.8) * 0.16;
-  runtime.root.position.y += (panelDrift - runtime.root.position.y) * 0.12;
+  let targetX = 0;
+  let targetY = panelDrift;
+  let scale = camera.aspect > 1 ? 1 : 0.84;
+
+  if (placement === 'hero') {
+    const viewportHalfHeight = camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const viewportHalfWidth = viewportHalfHeight * Math.max(camera.aspect, 0.1);
+    const wideFactor = clamp((camera.aspect - 1.1) / 0.7, 0, 1);
+    const centerFraction = THREE.MathUtils.lerp(0.38, 0.44, wideFactor);
+    const desiredScale = THREE.MathUtils.lerp(0.82, 0.98, wideFactor);
+    const horizontalFit = camera.aspect > 1
+      ? (viewportHalfWidth * 0.58) / HERO_GRAPH_RADIUS
+      : desiredScale;
+
+    targetX = viewportHalfWidth * centerFraction;
+    targetY = -viewportHalfHeight * 0.04;
+    scale = Math.min(desiredScale, horizontalFit);
+  }
+
+  runtime.root.position.x += (targetX - runtime.root.position.x) * 0.12;
+  runtime.root.position.y += (targetY - runtime.root.position.y) * 0.12;
   runtime.root.rotation.x += ((reducedMotion ? 0 : pointerY * 0.08) - runtime.root.rotation.x) * 0.08;
   runtime.root.rotation.y += ((reducedMotion ? 0 : pointerX * 0.1) - runtime.root.rotation.y) * 0.08;
-  runtime.root.scale.setScalar(camera.aspect > 1 ? 1 : 0.84);
+  runtime.root.scale.setScalar(scale);
 
   const targetColor = colorForState(state);
   runtime.pointMaterial.color.lerp(targetColor, reducedMotion ? 1 : 0.12);
@@ -130,12 +151,15 @@ function updateRuntime(
   runtime.edgeMaterial.opacity = FIELD_EDGE_OPACITY;
 }
 
+export type FieldPlacement = 'panel' | 'hero';
+
 export interface FieldGraphProps {
   state: SceneState;
   active: boolean;
+  placement?: FieldPlacement;
 }
 
-export function FieldGraph({ state, active }: FieldGraphProps) {
+export function FieldGraph({ state, active, placement = 'panel' }: FieldGraphProps) {
   const { camera, scene, size } = useThree();
   const tier = useNarrative((value) => value.tier);
   const reducedMotion = useNarrative((value) => value.reducedMotion);
@@ -237,7 +261,7 @@ export function FieldGraph({ state, active }: FieldGraphProps) {
     const runtime = runtimeRef.current;
     if (!runtime || !activeRef.current) return;
     const pointSize = FIELD_POINT_SIZE * (tier === 'low' ? 0.82 : tier === 'mid' ? 0.92 : 1);
-    updateRuntime(runtime, camera as THREE.PerspectiveCamera, stateRef.current, reducedMotion, pointSize);
+    updateRuntime(runtime, camera as THREE.PerspectiveCamera, stateRef.current, reducedMotion, pointSize, placement);
   });
 
   return null;

@@ -12,6 +12,7 @@ import { RESEARCH_NODES } from '@/content/research';
 import type { SceneState } from '@/content/types';
 import { setSceneFocus } from '@/lib/narrative/store';
 import { FieldPanel } from '@/scene/FieldPanel';
+import { HeroField } from '@/scene/HeroField';
 import { splitLines, type SplitLines } from './lines';
 import styles from './overlay.module.css';
 
@@ -353,7 +354,7 @@ export function Portfolio() {
               </p>
             </div>
           </div>
-          <FieldPanel state="signal" align="right" className={styles.heroField} />
+          <HeroField />
         </div>
       </section>
 

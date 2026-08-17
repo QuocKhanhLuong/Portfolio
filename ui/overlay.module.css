@@ -1043,7 +1043,7 @@
   }
 
   .hero {
-    min-height: 92svh;
+    min-height: 100svh;
     padding-top: clamp(112px, 22vw, 132px);
   }
 
@@ -1100,8 +1100,7 @@
 }
 
 .heroContent {
-  background: rgba(8, 9, 9, 0.94);
-  grid-column: 1 / span 7;
+  grid-column: 1 / span 5;
   grid-row: 1;
   min-width: 0;
   padding: clamp(8px, 1.5vw, 24px) 0;
@@ -1112,12 +1111,6 @@
 .heroName {
   max-width: 100%;
   overflow-wrap: anywhere;
-}
-
-.heroField {
-  grid-column: 8 / -1;
-  grid-row: 1;
-  min-height: clamp(18rem, 34vw, 32rem);
 }
 
 .heroAsideContent {
@@ -1234,7 +1227,6 @@
   }
 
   .heroContent,
-  .heroField,
   .sectionLayout {
     grid-column: 1;
     grid-row: auto;
@@ -1270,10 +1262,6 @@
 @media (max-width: 767px) {
   .heroContent {
     padding-top: 0;
-  }
-
-  .heroField {
-    min-height: 16rem;
   }
 
   .aboutGrid {
