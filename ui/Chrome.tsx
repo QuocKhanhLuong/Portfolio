@@ -2,23 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { NAV_ITEMS } from '@/content/portfolio';
+import { scrollToTop } from '@/lib/narrative/driver';
 import { subscribeFrame } from '@/lib/narrative/ticker';
 import styles from './overlay.module.css';
 
 export function SiteHeader() {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -44,13 +34,19 @@ export function SiteHeader() {
 
   return (
     <header
-      className={`${styles.siteHeader} ${isScrolled ? styles.siteHeaderScrolled : ''} ${
-        isMobileMenuOpen ? styles.siteHeaderMenuOpen : ''
-      }`}
+      className={`${styles.siteHeader} ${isMobileMenuOpen ? styles.siteHeaderMenuOpen : ''}`}
     >
-      <a className={styles.brand} href="#top" aria-label="Luong Quoc Khanh, back to top" onClick={closeMenu}>
-        <span className={styles.brandName}>Luong Quoc Khanh</span>
-        <span className={styles.brandRole}>Computer vision research / engineering</span>
+      <a
+        className={styles.homeLink}
+        href="#top"
+        aria-label="Home"
+        onClick={(event) => {
+          event.preventDefault();
+          closeMenu();
+          scrollToTop();
+        }}
+      >
+        HOME
       </a>
 
       <nav className={styles.primaryNav} aria-label="Primary navigation">

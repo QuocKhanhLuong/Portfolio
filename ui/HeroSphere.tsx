@@ -1,11 +1,9 @@
 'use client';
 
-import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
-import * as THREE from 'three';
+import { useEffect, useRef } from 'react';
 import { COLOR } from '@/lib/narrative/timeline';
 import { useNarrative } from '@/lib/narrative/store';
-import { liveFrame } from '@/lib/narrative/ticker';
+import { subscribeFrame } from '@/lib/narrative/ticker';
 
 /**
  * Hero sphere: a substantial 3D object that sits in the hero section.
@@ -19,6 +17,7 @@ export function HeroSphere() {
     time: 0,
     pointerX: 0,
     pointerY: 0,
+    handoff: 0,
   });
 
   const reducedMotion = useNarrative((s) => s.reducedMotion);
@@ -33,6 +32,14 @@ export function HeroSphere() {
     let animationId: number;
     let width = 0;
     let height = 0;
+
+    const unsubscribe = subscribeFrame((frame) => {
+      const state = stateRef.current;
+      const inSignalTransition = frame.stateA === 'signal' && frame.stateB === 'pixel';
+      const target = inSignalTransition || frame.stateA === 'signal' ? frame.blend : 1;
+      state.handoff += (target - state.handoff) * (reducedMotion ? 1 : 0.18);
+      canvas.style.opacity = `${1 - state.handoff * 0.86}`;
+    });
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -73,6 +80,15 @@ export function HeroSphere() {
           let x = Math.sin(theta) * Math.cos(phi);
           let y = Math.sin(theta) * Math.sin(phi);
           let z = Math.cos(theta);
+
+          // The persistent WebGL signal state is the same spherical shell. A
+          // small flattening/relief as it hands off keeps the explicit hero
+          // object visually connected to that field instead of popping away.
+          const deformation = state.handoff;
+          const relief = 1 + deformation * Math.sin(phi * 3 + state.time * 0.8) * 0.08;
+          x *= (1 - deformation * 0.18) * relief;
+          y *= (1 + deformation * 0.05) * relief;
+          z *= relief;
 
           // Apply rotation
           const cosY = Math.cos(state.rotation.y);
@@ -120,7 +136,7 @@ export function HeroSphere() {
       points.forEach((point) => {
         const depth = (point.z + 1) / 2;
         const mix = 0.35 + depth * 0.5;
-        const alpha = 0.15 + depth * 0.35;
+        const alpha = (0.15 + depth * 0.35) * (1 - state.handoff * 0.42);
 
         const r = Math.round(inkColor[0] * 255 * (1 - mix) + coolColor[0] * 255 * mix);
         const g = Math.round(inkColor[1] * 255 * (1 - mix) + coolColor[1] * 255 * mix);
@@ -142,6 +158,7 @@ export function HeroSphere() {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', resize);
       canvas.removeEventListener('pointermove', handlePointerMove);
+      unsubscribe();
     };
   }, [reducedMotion]);
 

@@ -82,13 +82,17 @@ export function sample(progress: number, out: NarrativeFrame = scratch): Narrati
   } else {
     a = currentSceneIndex(p);
     b = Math.min(last, a + 1);
-    const span = anchors[b].progress - anchors[a].progress;
-    raw = span > 0 ? (p - anchors[a].progress) / span : 0;
+    const start = anchors[a].transitionStart;
+    const end = anchors[a].transitionEnd;
+    raw = end > start ? (p - start) / (end - start) : 0;
   }
 
-  // Hold at each anchor, then transition. Without this the field is always
-  // morphing and never reads as *being* anything.
-  const blend = a === b ? 0 : smootherstep(0.16, 0.88, raw);
+  // Each measured anchor owns an outgoing window. The field therefore begins
+  // changing before the next section arrives, crosses the section boundary in
+  // mid-morph, and settles before the next anchor's centre. The clamped
+  // smootherstep also makes a fast scroll land on a valid intermediate state
+  // instead of snapping between categorical states.
+  const blend = a === b ? 0 : smootherstep(0, 1, raw);
 
   out.sceneIndex = a;
   out.stateA = anchors[a].state;

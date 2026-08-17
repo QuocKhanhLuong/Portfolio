@@ -22,6 +22,16 @@ import { emitFrame } from './ticker';
 let lenis: Lenis | null = null;
 let disposed = true;
 
+/** Scroll through the same Lenis owner as the rest of the narrative. */
+export function scrollToTop() {
+  if (lenis) {
+    lenis.scrollTo(0);
+    return;
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 export interface DriverOptions {
   reducedMotion: boolean;
 }
@@ -60,6 +70,9 @@ export function startNarrativeDriver({ reducedMotion }: DriverOptions): () => vo
 
   let lastProgress = nativeProgress();
   let startTime = -1;
+  let lastPointerX = 0;
+  let lastPointerY = 0;
+  let lastPointerTime = 0;
 
   const tick = (time: number, deltaMs: number) => {
     if (disposed) return;
@@ -82,26 +95,16 @@ export function startNarrativeDriver({ reducedMotion }: DriverOptions): () => vo
 
     scrollState.time = time - startTime;
 
-    // The cursor is an instrument, not a mouse trail: it stays engaged while it
-    // is over the page and only releases when it leaves.
-    const pointerEase = reducedMotion ? 1 : 1 - Math.pow(0.004, dt);
-    scrollState.pointerStrength +=
-      (scrollState.pointerTarget - scrollState.pointerStrength) * pointerEase;
+    // F+ uses a scalar gesture energy: pointer movement attacks it by the
+    // normalized travel distance, then the render loop releases it at .96 per
+    // frame. There is intentionally no second velocity smoother here.
+    scrollState.pointerEnergy = reducedMotion ? 0 : scrollState.pointerEnergy * 0.96;
 
     // Foreground project/research focus eases independently from scroll. It is
     // a temporary inspection request, never a second scene timeline.
     const focusEase = reducedMotion ? 1 : 1 - Math.pow(0.002, dt);
     scrollState.focusStrength +=
       (scrollState.focusTargetStrength - scrollState.focusStrength) * focusEase;
-
-    // Slice position for the medical states: the cursor cuts when it is on the
-    // page, and a slow sweep keeps the instrument alive when it is not.
-    const sweep = Math.sin(scrollState.time * 0.22) * 0.55;
-    scrollState.scanX +=
-      (scrollState.pointerX * 1.15 * scrollState.pointerStrength +
-        sweep * (1 - scrollState.pointerStrength) -
-        scrollState.scanX) *
-      Math.min(1, dt * 4);
 
     const index = currentSceneIndex(scrollState.progress);
     if (index !== useNarrative.getState().sceneIndex) useNarrative.getState().setSceneIndex(index);
@@ -110,13 +113,29 @@ export function startNarrativeDriver({ reducedMotion }: DriverOptions): () => vo
   };
 
   const onPointerMove = (e: PointerEvent) => {
-    scrollState.pointerX = (e.clientX / window.innerWidth) * 2 - 1;
-    scrollState.pointerY = -((e.clientY / window.innerHeight) * 2 - 1);
-    scrollState.pointerTarget = e.pointerType === 'touch' ? 0.7 : 1;
+    const pageX = e.clientX / window.innerWidth;
+    const pageY = e.clientY / window.innerHeight;
+    const x = pageX * 2 - 1;
+    const y = -(pageY * 2 - 1);
+    const now = performance.now();
+    const coarse = e.pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches;
+
+    scrollState.pointerX = x;
+    scrollState.pointerY = y;
+    if (!reducedMotion && !coarse) {
+      const previousX = lastPointerTime > 0 ? lastPointerX : pageX;
+      const previousY = lastPointerTime > 0 ? lastPointerY : pageY;
+      const distance = Math.hypot(pageX - previousX, pageY - previousY);
+      scrollState.pointerEnergy = Math.min(0.85, scrollState.pointerEnergy + distance * 3.5);
+    }
+
+    lastPointerX = pageX;
+    lastPointerY = pageY;
+    lastPointerTime = now;
   };
 
   const releasePointer = () => {
-    scrollState.pointerTarget = 0;
+    lastPointerTime = 0;
   };
 
   window.addEventListener('pointermove', onPointerMove, { passive: true });
@@ -149,8 +168,7 @@ export function startNarrativeDriver({ reducedMotion }: DriverOptions): () => vo
     window.removeEventListener('blur', releasePointer);
     lenis?.destroy();
     lenis = null;
-    scrollState.pointerTarget = 0;
-    scrollState.pointerStrength = 0;
+    scrollState.pointerEnergy = 0;
     scrollState.focusTargetStrength = 0;
     scrollState.focusStrength = 0;
   };

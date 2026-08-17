@@ -119,6 +119,21 @@ float morphLens(float dist, float aperture, float strength) {
     clamp(strength, 0.0, 1.0);
 }
 
+/** A short, directional field disturbance shared by grain and readable nodes. */
+vec3 pointerDisturbance(vec3 p, vec2 pointer, vec2 velocity, float energy, float radius) {
+  float dist = max(length(p.xy - pointer), 0.0001);
+  float edge = max(0.08, radius * 1.35);
+  float falloff = 1.0 - smoothstep(edge * 0.12, edge, dist);
+  vec2 radial = (p.xy - pointer) / dist;
+  float speed = length(velocity);
+  vec2 direction = speed > 0.001 ? velocity / speed : vec2(0.0);
+  float repel = (0.045 + energy * 0.14) * falloff * falloff;
+  float trail = energy * 0.11 * falloff;
+  p.xy += radial * repel - direction * trail;
+  p.z += energy * falloff * 0.055;
+  return p;
+}
+
 /** Which of the three packed uncertainty routes this particle belongs to. */
 float morphBranch(float index, float edgeCount) {
   return mod(floor(index / max(1.0, edgeCount)), 3.0);
@@ -287,6 +302,36 @@ export function morphLens(dist: number, aperture: number, strength: number) {
   return (
     (1 - smoothstep01(aperture * MORPH.apertureInner, aperture, dist)) * clamp01(strength)
   );
+}
+
+/** TypeScript twin of the shared directional pointer disturbance. */
+export function pointerDisturbance(
+  p: MutableVec3,
+  pointerX: number,
+  pointerY: number,
+  velocityX: number,
+  velocityY: number,
+  energy: number,
+  radius: number,
+): MutableVec3 {
+  const e = clamp01(energy);
+  if (e <= 0.001) return p;
+
+  const dx = p.x - pointerX;
+  const dy = p.y - pointerY;
+  const dist = Math.max(Math.hypot(dx, dy), 0.0001);
+  const edge = Math.max(0.08, radius * 1.35);
+  const falloff = 1 - smoothstep01(edge * 0.12, edge, dist);
+  const speed = Math.hypot(velocityX, velocityY);
+  const directionX = speed > 0.001 ? velocityX / speed : 0;
+  const directionY = speed > 0.001 ? velocityY / speed : 0;
+  const repel = (0.045 + e * 0.14) * falloff * falloff;
+  const trail = e * 0.11 * falloff;
+
+  p.x += (dx / dist) * repel - directionX * trail;
+  p.y += (dy / dist) * repel - directionY * trail;
+  p.z += e * falloff * 0.055;
+  return p;
 }
 
 export function morphBranch(index: number, edgeCount: number) {

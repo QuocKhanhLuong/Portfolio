@@ -17,28 +17,61 @@ export interface SceneAnchor {
   stateIndex: number;
   /** Global scroll progress, 0–1. */
   progress: number;
+  /** Start of the outgoing morph window, expressed on the global scroll axis. */
+  transitionStart: number;
+  /** End of the outgoing morph window, expressed on the global scroll axis. */
+  transitionEnd: number;
 }
+
+/** Smallest allowed gap between anchors, so a transition never becomes a snap. */
+const MIN_GAP = 0.012;
+
+/**
+ * Anchors are measured at section centres. The morph therefore crosses the
+ * midpoint between two centres, beginning in the latter part of the current
+ * section and settling in the early part of the next one.
+ */
+const TRANSITION_START_RATIO = 0.35;
+const TRANSITION_END_RATIO = 0.65;
 
 const anchor = (state: SceneState, progress: number): SceneAnchor => ({
   state,
   stateIndex: SCENE_STATES.indexOf(state),
   progress,
+  transitionStart: progress,
+  transitionEnd: progress,
 });
+
+const applyTransitionWindows = (list: SceneAnchor[]): SceneAnchor[] => {
+  for (let i = 0; i < list.length; i += 1) {
+    const current = list[i];
+    const next = list[i + 1];
+    if (!next) {
+      current.transitionStart = current.progress;
+      current.transitionEnd = current.progress;
+      continue;
+    }
+
+    const span = Math.max(MIN_GAP, next.progress - current.progress);
+    current.transitionStart = current.progress + span * TRANSITION_START_RATIO;
+    current.transitionEnd = current.progress + span * TRANSITION_END_RATIO;
+  }
+  return list;
+};
 
 /**
  * Used before the first measurement (and on the server): the ten states spread
  * evenly. Replaced on mount by the real DOM layout.
  */
-const FALLBACK: SceneAnchor[] = SCENE_STATES.map((state, i) =>
-  anchor(state, SCENE_STATES.length === 1 ? 0.5 : i / (SCENE_STATES.length - 1)),
+const FALLBACK: SceneAnchor[] = applyTransitionWindows(
+  SCENE_STATES.map((state, i) =>
+    anchor(state, SCENE_STATES.length === 1 ? 0.5 : i / (SCENE_STATES.length - 1)),
+  ),
 );
 
 let anchors: SceneAnchor[] = FALLBACK;
 
 export const sceneAnchors = (): SceneAnchor[] => anchors;
-
-/** Smallest allowed gap between anchors, so a transition never becomes a snap. */
-const MIN_GAP = 0.012;
 
 function isSceneState(value: string | undefined): value is SceneState {
   return !!value && (SCENE_STATES as string[]).includes(value);
@@ -98,7 +131,7 @@ export function measureSceneAnchors(root: ParentNode = document): SceneAnchor[] 
     });
   }
 
-  anchors = measured;
+  anchors = applyTransitionWindows(measured);
   return anchors;
 }
 

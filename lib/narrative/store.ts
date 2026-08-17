@@ -22,19 +22,10 @@ export const scrollState = {
   /** Pointer in normalized device coords, -1..1. */
   pointerX: 0,
   pointerY: 0,
-  /**
-   * Eased optical-instrument strength. It follows `pointerTarget`, which holds
-   * at 1 for as long as the pointer is over the document. A parked cursor is
-   * still an inspection — it is how you look closely at something — so this no
-   * longer decays merely because the pointer stopped moving. It falls only when
-   * the pointer actually leaves.
-   */
-  pointerStrength: 0,
-  pointerTarget: 0,
+  /** Short-lived F+ movement energy, capped at .85 and released at .96/frame. */
+  pointerEnergy: 0,
   /** Scene state temporarily requested by a focused foreground item. */
   focusState: 0,
-  /** -1..1 slice coordinate the medical states are being cut at. */
-  scanX: 0,
   /** Current and target blend for the focused scene state. */
   focusStrength: 0,
   focusTargetStrength: 0,

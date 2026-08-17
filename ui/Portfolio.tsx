@@ -13,7 +13,6 @@ import type { SceneState } from '@/content/types';
 import { setSceneFocus } from '@/lib/narrative/store';
 import { splitLines, type SplitLines } from './lines';
 import { HeroSphere } from './HeroSphere';
-import { ResearchDiagram, ResearchTetrahedron, ResearchWave } from './ResearchVisuals';
 import styles from './overlay.module.css';
 
 const marqueeLabels = Array.from(
@@ -130,9 +129,7 @@ function SectionHeading({
         </h2>
         {description && (
           <p className={styles.sectionDescription} data-motion="fade">
-            {/* The entrance owns the paragraph; the sticky handoff owns this
-                inner span. One element, one owner. */}
-            <span data-motion="handoff">{description}</span>
+            <span>{description}</span>
           </p>
         )}
       </div>
@@ -256,7 +253,7 @@ export function Portfolio() {
         const pick = (selector: string) => Array.from(row.querySelectorAll<HTMLElement>(selector));
         const index = pick('[data-motion="row-index"]');
         const meta = pick('[data-motion="metadata"]');
-        const lead = pick('[data-motion="row-lead"]');
+        const lead = pick('[data-motion="row-lead"]:not([data-editorial-focus])');
         const detail = pick('[data-motion="row-detail"]');
 
         const timeline = gsap.timeline({
@@ -282,43 +279,31 @@ export function Portfolio() {
           );
       });
 
-      // Sticky headings hand off as their section runs out, instead of sitting
-      // at full strength over the next one. The entrance tweens above target
-      // the header's children, so nothing else is writing this opacity.
-      root.querySelectorAll<HTMLElement>('[data-motion="section-header"]').forEach((header) => {
-        const section = header.closest('section');
-        if (!section) return;
+      // Editorial focus owns the large text moments from entry through exit.
+      // The section headings are ordinary flow content; this scrub supplies the
+      // focus choreography that used to be implied by a sticky handoff.
+      root
+        .querySelectorAll<HTMLElement>('[data-motion="section-header"], [data-editorial-focus]')
+        .forEach((element) => {
+          const section = element.closest('section');
+          const row = element.closest('[data-motion="row"]');
+          const trigger = element.matches('[data-motion="section-header"]') ? section : row ?? element;
+          if (!trigger) return;
 
-        // As the heading takes up its sticky position the supporting line steps
-        // back, so the heading hands over to the section's content instead of
-        // sitting on top of the first row.
-        const handoff = header.querySelector<HTMLElement>('[data-motion="handoff"]');
-        if (handoff) {
-          gsap.fromTo(
-            handoff,
-            { opacity: 1, yPercent: 0 },
-            {
-              opacity: 0,
-              yPercent: -35,
-              ease: 'none',
-              immediateRender: false,
-              // Triggered from the section, not the header: a sticky element
-              // moves relative to the scroller and makes a poor trigger.
-              scrollTrigger: { trigger: section, start: 'top 10%', end: '+=200', scrub: true },
-            },
-          );
-        }
+          const focus = gsap.timeline({
+            defaults: { ease: 'none' },
+            scrollTrigger: { trigger, start: 'top 88%', end: 'bottom 18%', scrub: 0.7 },
+          });
 
-        gsap.fromTo(
-          header,
-          { opacity: 1 },
-          {
-            opacity: 0.18,
-            ease: 'none',
-            scrollTrigger: { trigger: section, start: 'bottom 78%', end: 'bottom 30%', scrub: true },
-          },
-        );
-      });
+          focus
+            .fromTo(
+              element,
+              { filter: 'blur(10px)', opacity: 0, y: 10 },
+              { filter: 'blur(0px)', opacity: 1, y: 0, duration: 0.25 },
+            )
+            .to(element, { filter: 'blur(0px)', opacity: 1, y: 0, duration: 0.5 })
+            .to(element, { filter: 'blur(12px)', opacity: 0.15, y: -10, duration: 0.25 });
+        });
 
       // Parallax targets are always dedicated wrappers. An element that is both
       // entering and parallaxing has two owners for one transform, and the
@@ -453,7 +438,7 @@ export function Portfolio() {
                   <p className={styles.rowMeta} data-motion="metadata">
                     {project.meta}
                   </p>
-                  <h3 className={styles.rowTitle} data-motion="row-lead">
+                  <h3 className={styles.rowTitle} data-motion="row-lead" data-editorial-focus="true">
                     {project.title}
                   </h3>
                   <p className={styles.rowSummary} data-motion="row-lead">
@@ -464,22 +449,16 @@ export function Portfolio() {
                       <span key={tag}>{tag}</span>
                     ))}
                   </div>
-                </div>
-                <div className={styles.rowAside} data-motion="row-detail">
-                  <div className={styles.rowVisual}>
-                    <ResearchDiagram
-                      kind={project.scene === 'cloud' ? 'cloud' : project.scene === 'human' ? 'human' : 'features'}
-                      className={styles.researchDiagram}
-                    />
+                  <div className={styles.rowMetaFooter} data-motion="row-detail">
+                    <span className={styles.sceneLabel}>Field / {project.scene}</span>
+                    {project.href ? (
+                      <a className={styles.rowLink} href={project.href} {...externalProps(project.href)}>
+                        Case study <span aria-hidden="true">↗</span>
+                      </a>
+                    ) : (
+                      <span className={styles.unavailable}>Case study pending</span>
+                    )}
                   </div>
-                  <span className={styles.sceneLabel}>Field / {project.scene}</span>
-                  {project.href ? (
-                    <a className={styles.rowLink} href={project.href} {...externalProps(project.href)}>
-                      Case study <span aria-hidden="true">↗</span>
-                    </a>
-                  ) : (
-                    <span className={styles.unavailable}>Case study pending</span>
-                  )}
                 </div>
               </SceneFocus>
             ))}
@@ -516,27 +495,24 @@ export function Portfolio() {
                     <p className={styles.rowMeta} data-motion="metadata">
                       {node.meta}
                     </p>
-                    <h3 className={styles.rowTitle} data-motion="row-lead">
+                    <h3 className={styles.rowTitle} data-motion="row-lead" data-editorial-focus="true">
                       {node.title ?? node.label}
                     </h3>
                     <p className={styles.rowSummary} data-motion="row-lead">
                       {node.summary}
                     </p>
-                  </div>
-                  <div className={styles.rowAside} data-motion="row-detail">
-                    <div className={styles.rowVisual}>
-                      <ResearchDiagram kind={scene === 'uncertainty' ? 'human' : 'features'} className={styles.researchDiagram} />
+                    <div className={styles.rowMetaFooter} data-motion="row-detail">
+                      <span className={styles.sceneLabel}>Field / {scene}</span>
+                      {node.links?.length ? (
+                        node.links.map((link) => (
+                          <a key={link.href} className={styles.rowLink} href={link.href} {...externalProps(link.href)}>
+                            {link.label} <span aria-hidden="true">↗</span>
+                          </a>
+                        ))
+                      ) : (
+                        <span className={styles.unavailable}>Publication link pending</span>
+                      )}
                     </div>
-                    <span className={styles.sceneLabel}>Field / {scene}</span>
-                    {node.links?.length ? (
-                      node.links.map((link) => (
-                        <a key={link.href} className={styles.rowLink} href={link.href} {...externalProps(link.href)}>
-                          {link.label} <span aria-hidden="true">↗</span>
-                        </a>
-                      ))
-                    ) : (
-                      <span className={styles.unavailable}>Publication link pending</span>
-                    )}
                   </div>
                 </SceneFocus>
               );
@@ -591,17 +567,20 @@ export function Portfolio() {
             <p className={styles.subsectionMarker} data-motion="fade">
               Technical capabilities
             </p>
-            <div className={styles.capabilityGrid} data-motion="row">
-              {CAPABILITIES.map((group) => (
+            <div className={styles.capabilityGrid}>
+              {CAPABILITIES.map((group, index) => (
                 <SceneFocus
                   key={group.title}
                   state={group.scene}
                   className={styles.capabilityGroup}
                   label={group.title}
-                  motion="row-detail"
+                  motion="row"
                 >
-                  <h3>{group.title}</h3>
-                  <ul>
+                  <span className={styles.capabilityIndex} data-motion="row-index">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <h3 data-motion="row-lead">{group.title}</h3>
+                  <ul data-motion="row-detail">
                     {group.items.map((item) => (
                       <li key={item}>{item}</li>
                     ))}
@@ -624,7 +603,7 @@ export function Portfolio() {
             <p className={styles.eyebrow} data-motion="metadata">
               05 / Contact
             </p>
-            <h2 className="headline" id="contact-title" data-motion="mask">
+            <h2 className="headline" id="contact-title" data-motion="mask" data-editorial-focus="true">
               Open to careful questions and difficult visual problems.
             </h2>
             <p className={styles.contactLead} data-motion="row-detail">
@@ -646,12 +625,6 @@ export function Portfolio() {
             </div>
             <p className={styles.footerNote}>Luong Quoc Khanh · Computer vision research / engineering</p>
           </div>
-          <div className={styles.contactVisual}>
-            <ResearchTetrahedron className={styles.canvasVisual} />
-          </div>
-        </div>
-        <div className={styles.contactWave}>
-          <ResearchWave className={styles.canvasVisual} />
         </div>
       </section>
     </main>

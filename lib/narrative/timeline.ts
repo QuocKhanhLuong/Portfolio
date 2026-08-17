@@ -65,8 +65,8 @@ export const COLOR = {
 
 /**
  * Per-state tuning of the transition engine and the optical instrument. Each
- * state gets a different inspection radius and reveal strength; the pointer
- * never physically pushes the field around.
+ * state gets a different inspection radius and reveal strength; pointer energy
+ * adds a shared, restrained physical disturbance on top of that reading.
  */
 export interface InteractionKey {
   /** Local optical reveal strength, not physical displacement. */
