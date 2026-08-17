@@ -77,7 +77,7 @@ export function FieldPanel({ state, align, className = '' }: FieldPanelProps) {
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           camera={{ fov: 42, near: 0.1, far: 100, position: [0, 0, 5.9] }}
           onCreated={({ gl }) => {
-            gl.setClearColor('#080909', 1);
+            gl.setClearColor(0x000000, 0);
             gl.toneMapping = THREE.ACESFilmicToneMapping;
             gl.toneMappingExposure = 1.05;
             gl.outputColorSpace = THREE.SRGBColorSpace;

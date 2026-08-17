@@ -8,7 +8,6 @@ import { scrollState, useNarrative } from '@/lib/narrative/store';
 import { FIELD_EDGE_OPACITY, FIELD_NODE_COUNT, FIELD_POINT_SIZE, getField, type Field } from './fieldTargets';
 
 const CAMERA_DISTANCE = 5.9;
-const BASE_BACKGROUND = '#080909';
 const NODE_COLOR = '#ECE9E1';
 const EDGE_COLOR = '#8296AA';
 const WARM_COLOR = '#C87552';
@@ -27,7 +26,6 @@ interface FieldRuntime {
   positions: Float32Array;
   edgePositions: Float32Array;
   targetPositions: THREE.Vector3[];
-  previousBackground: THREE.Color | THREE.Texture | null;
   time: number;
 }
 
@@ -123,7 +121,7 @@ function updateRuntime(
   runtime.root.position.y += (panelDrift - runtime.root.position.y) * 0.12;
   runtime.root.rotation.x += ((reducedMotion ? 0 : pointerY * 0.08) - runtime.root.rotation.x) * 0.08;
   runtime.root.rotation.y += ((reducedMotion ? 0 : pointerX * 0.1) - runtime.root.rotation.y) * 0.08;
-  runtime.root.scale.setScalar(Math.min(1, camera.aspect > 1 ? 0.94 : 0.72));
+  runtime.root.scale.setScalar(camera.aspect > 1 ? 1 : 0.84);
 
   const targetColor = colorForState(state);
   runtime.pointMaterial.color.lerp(targetColor, reducedMotion ? 1 : 0.12);
@@ -166,7 +164,6 @@ export function FieldGraph({ state, active }: FieldGraphProps) {
     const field = fieldRef.current;
     if (!field) return;
 
-    const previousBackground = scene.background;
     const sprite = createSprite();
     const root = new THREE.Group();
     scene.add(root);
@@ -209,7 +206,6 @@ export function FieldGraph({ state, active }: FieldGraphProps) {
     edges.frustumCulled = false;
     root.add(edges);
 
-    scene.background = new THREE.Color(BASE_BACKGROUND);
     runtimeRef.current = {
       field,
       root,
@@ -223,7 +219,6 @@ export function FieldGraph({ state, active }: FieldGraphProps) {
       positions,
       edgePositions,
       targetPositions,
-      previousBackground,
       time: 0,
     };
 
@@ -235,7 +230,6 @@ export function FieldGraph({ state, active }: FieldGraphProps) {
       edgeMaterial.dispose();
       sprite?.dispose();
       scene.remove(root);
-      scene.background = previousBackground;
     };
   }, [camera, scene]);
 
@@ -244,7 +238,7 @@ export function FieldGraph({ state, active }: FieldGraphProps) {
     if (!runtime || !activeRef.current) return;
     const pointSize = FIELD_POINT_SIZE * (tier === 'low' ? 0.82 : tier === 'mid' ? 0.92 : 1);
     updateRuntime(runtime, camera as THREE.PerspectiveCamera, stateRef.current, reducedMotion, pointSize);
-  }, 1);
+  });
 
   return null;
 }
