@@ -359,16 +359,16 @@ export function Portfolio() {
 
       <section className={styles.section} id="about" aria-labelledby="about-title" data-scene="pixel">
         <div className={styles.sectionInner}>
-          <SectionHeading
-            number="01"
-            label="About"
-            title="Working between visual evidence and understanding."
-            description="A short account of the questions that connect the work."
-            id="about-title"
-          />
           <div className={`${styles.sectionLayout} ${styles.layoutLeft}`}>
             <FieldPanel state="pixel" align="left" className={styles.sectionField} />
             <div className={styles.sectionContent}>
+              <SectionHeading
+                number="01"
+                label="About"
+                title="Working between visual evidence and understanding."
+                description="A short account of the questions that connect the work."
+                id="about-title"
+              />
               <div className={styles.aboutGrid} data-motion="row">
                 <div className="body-copy" data-motion="row-lead">
                   {ABOUT.paragraphs.map((paragraph) => (
@@ -397,57 +397,57 @@ export function Portfolio() {
 
       <section className={styles.section} id="work" aria-labelledby="work-title" data-scene="features">
         <div className={styles.sectionInner}>
-          <SectionHeading
-            number="02"
-            label="Selected work"
-            title="Projects that make visual structure useful."
-            description="Hover or focus an entry to inspect the related field state."
-            id="work-title"
-          />
           <div className={`${styles.sectionLayout} ${styles.layoutRight}`}>
             <div className={styles.sectionContent}>
-          <div className={styles.projectList}>
-            {PROJECTS.map((project, index) => (
-              <SceneFocus
-                key={project.id}
-                state={project.scene}
-                article
-                className={styles.projectRow}
-                label={project.title}
-                motion="row"
-              >
-                <span className={styles.rowIndex} data-motion="row-index" data-scene={project.scene}>
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <div className={styles.rowMain}>
-                  <p className={styles.rowMeta} data-motion="metadata">
-                    {project.meta}
-                  </p>
-                  <h3 className={styles.rowTitle} data-motion="row-lead" data-editorial-focus="true">
-                    {project.title}
-                  </h3>
-                  <p className={styles.rowSummary} data-motion="row-lead">
-                    {project.summary}
-                  </p>
-                  <div className={styles.tagList} aria-label="Technology stack" data-motion="row-detail">
-                    {project.stack.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                  </div>
-                  <div className={styles.rowMetaFooter} data-motion="row-detail">
-                    <span className={styles.sceneLabel}>Field / {project.scene}</span>
-                    {project.href ? (
-                      <a className={styles.rowLink} href={project.href} {...externalProps(project.href)}>
-                        Case study <span aria-hidden="true">↗</span>
-                      </a>
-                    ) : (
-                      <span className={styles.unavailable}>Case study pending</span>
-                    )}
-                  </div>
-                </div>
-              </SceneFocus>
-            ))}
-          </div>
+              <SectionHeading
+                number="02"
+                label="Selected work"
+                title="Projects that make visual structure useful."
+                description="Hover or focus an entry to inspect the related field state."
+                id="work-title"
+              />
+              <div className={styles.projectList}>
+                {PROJECTS.map((project, index) => (
+                  <SceneFocus
+                    key={project.id}
+                    state={project.scene}
+                    article
+                    className={styles.projectRow}
+                    label={project.title}
+                    motion="row"
+                  >
+                    <span className={styles.rowIndex} data-motion="row-index">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div className={styles.rowMain}>
+                      <p className={styles.rowMeta} data-motion="metadata">
+                        {project.meta}
+                      </p>
+                      <h3 className={styles.rowTitle} data-motion="row-lead" data-editorial-focus="true">
+                        {project.title}
+                      </h3>
+                      <p className={styles.rowSummary} data-motion="row-lead">
+                        {project.summary}
+                      </p>
+                      <div className={styles.tagList} aria-label="Technology stack" data-motion="row-detail">
+                        {project.stack.map((tag) => (
+                          <span key={tag}>{tag}</span>
+                        ))}
+                      </div>
+                      <div className={styles.rowMetaFooter} data-motion="row-detail">
+                        <span className={styles.sceneLabel}>Field / {project.scene}</span>
+                        {project.href ? (
+                          <a className={styles.rowLink} href={project.href} {...externalProps(project.href)}>
+                            Case study <span aria-hidden="true">↗</span>
+                          </a>
+                        ) : (
+                          <span className={styles.unavailable}>Case study pending</span>
+                        )}
+                      </div>
+                    </div>
+                  </SceneFocus>
+                ))}
+              </div>
             </div>
             <FieldPanel state="features" align="right" className={styles.sectionField} />
           </div>
@@ -456,58 +456,58 @@ export function Portfolio() {
 
       <section className={styles.section} id="research" aria-labelledby="research-title" data-scene="uncertainty">
         <div className={styles.sectionInner}>
-          <SectionHeading
-            number="03"
-            label="Research / publications"
-            title="Questions, papers, and the relationships between them."
-            description="The background graph is a visual index. The readable record stays here."
-            id="research-title"
-          />
           <div className={`${styles.sectionLayout} ${styles.layoutLeft}`}>
             <FieldPanel state="uncertainty" align="left" className={styles.sectionField} />
             <div className={styles.sectionContent}>
-          <div className={styles.researchList}>
-            {papers.map((node, index) => {
-              const scene: SceneState = node.kind === 'open' ? 'uncertainty' : 'graph';
-              return (
-                <SceneFocus
-                  key={node.id}
-                  state={scene}
-                  article
-                  className={styles.researchRow}
-                  label={node.label}
-                  motion="row"
-                >
-                  <span className={styles.rowIndex} data-motion="row-index" data-scene={scene}>
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <div className={styles.rowMain}>
-                    <p className={styles.rowMeta} data-motion="metadata">
-                      {node.meta}
-                    </p>
-                    <h3 className={styles.rowTitle} data-motion="row-lead" data-editorial-focus="true">
-                      {node.title ?? node.label}
-                    </h3>
-                    <p className={styles.rowSummary} data-motion="row-lead">
-                      {node.summary}
-                    </p>
-                    <div className={styles.rowMetaFooter} data-motion="row-detail">
-                      <span className={styles.sceneLabel}>Field / {scene}</span>
-                      {node.links?.length ? (
-                        node.links.map((link) => (
-                          <a key={link.href} className={styles.rowLink} href={link.href} {...externalProps(link.href)}>
-                            {link.label} <span aria-hidden="true">↗</span>
-                          </a>
-                        ))
-                      ) : (
-                        <span className={styles.unavailable}>Publication link pending</span>
-                      )}
-                    </div>
-                  </div>
-                </SceneFocus>
-              );
-            })}
-          </div>
+              <SectionHeading
+                number="03"
+                label="Research / publications"
+                title="Questions, papers, and the relationships between them."
+                description="The background graph is a visual index. The readable record stays here."
+                id="research-title"
+              />
+              <div className={styles.researchList}>
+                {papers.map((node, index) => {
+                  const scene: SceneState = node.kind === 'open' ? 'uncertainty' : 'graph';
+                  return (
+                    <SceneFocus
+                      key={node.id}
+                      state={scene}
+                      article
+                      className={styles.researchRow}
+                      label={node.label}
+                      motion="row"
+                    >
+                      <span className={styles.rowIndex} data-motion="row-index">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <div className={styles.rowMain}>
+                        <p className={styles.rowMeta} data-motion="metadata">
+                          {node.meta}
+                        </p>
+                        <h3 className={styles.rowTitle} data-motion="row-lead" data-editorial-focus="true">
+                          {node.title ?? node.label}
+                        </h3>
+                        <p className={styles.rowSummary} data-motion="row-lead">
+                          {node.summary}
+                        </p>
+                        <div className={styles.rowMetaFooter} data-motion="row-detail">
+                          <span className={styles.sceneLabel}>Field / {scene}</span>
+                          {node.links?.length ? (
+                            node.links.map((link) => (
+                              <a key={link.href} className={styles.rowLink} href={link.href} {...externalProps(link.href)}>
+                                {link.label} <span aria-hidden="true">↗</span>
+                              </a>
+                            ))
+                          ) : (
+                            <span className={styles.unavailable}>Publication link pending</span>
+                          )}
+                        </div>
+                      </div>
+                    </SceneFocus>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -515,61 +515,61 @@ export function Portfolio() {
 
       <section className={styles.section} id="experience" aria-labelledby="experience-title" data-scene="graph">
         <div className={styles.sectionInner}>
-          <SectionHeading
-            number="04"
-            label="Experience"
-            title="Research and engineering, kept close to the evidence."
-            id="experience-title"
-          />
           <div className={`${styles.sectionLayout} ${styles.layoutRight}`}>
             <div className={styles.sectionContent}>
-          <div className={styles.experienceList}>
-            {EXPERIENCE.map((item) => (
-              <article key={item.id} className={styles.experienceRow} data-motion="row">
-                <p className={styles.rowMeta} data-motion="metadata">
-                  {item.period}
-                </p>
-                <div>
-                  <h3 className={styles.rowTitle} data-motion="row-lead">
-                    {item.role}
-                  </h3>
-                  <p className={styles.experienceOrganization} data-motion="row-detail">
-                    {item.organization}
-                  </p>
-                  <p className={styles.rowSummary} data-motion="row-detail">
-                    {item.summary}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
+              <SectionHeading
+                number="04"
+                label="Experience"
+                title="Research and engineering, kept close to the evidence."
+                id="experience-title"
+              />
+              <div className={styles.experienceList}>
+                {EXPERIENCE.map((item) => (
+                  <article key={item.id} className={styles.experienceRow} data-motion="row">
+                    <p className={styles.rowMeta} data-motion="metadata">
+                      {item.period}
+                    </p>
+                    <div>
+                      <h3 className={styles.rowTitle} data-motion="row-lead">
+                        {item.role}
+                      </h3>
+                      <p className={styles.experienceOrganization} data-motion="row-detail">
+                        {item.organization}
+                      </p>
+                      <p className={styles.rowSummary} data-motion="row-detail">
+                        {item.summary}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
 
-          <div className={styles.capabilityBlock}>
-            <p className={styles.subsectionMarker} data-motion="fade">
-              Technical capabilities
-            </p>
-            <div className={styles.capabilityGrid}>
-              {CAPABILITIES.map((group, index) => (
-                <SceneFocus
-                  key={group.title}
-                  state={group.scene}
-                  className={styles.capabilityGroup}
-                  label={group.title}
-                  motion="row"
-                >
-                  <span className={styles.capabilityIndex} data-motion="row-index">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <h3 data-motion="row-lead">{group.title}</h3>
-                  <ul data-motion="row-detail">
-                    {group.items.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </SceneFocus>
-              ))}
-            </div>
-          </div>
+              <div className={styles.capabilityBlock}>
+                <p className={styles.subsectionMarker} data-motion="fade">
+                  Technical capabilities
+                </p>
+                <div className={styles.capabilityGrid}>
+                  {CAPABILITIES.map((group, index) => (
+                    <SceneFocus
+                      key={group.title}
+                      state={group.scene}
+                      className={styles.capabilityGroup}
+                      label={group.title}
+                      motion="row"
+                    >
+                      <span className={styles.capabilityIndex} data-motion="row-index">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <h3 data-motion="row-lead">{group.title}</h3>
+                      <ul data-motion="row-detail">
+                        {group.items.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </SceneFocus>
+                  ))}
+                </div>
+              </div>
             </div>
             <FieldPanel state="graph" align="right" className={styles.sectionField} />
           </div>

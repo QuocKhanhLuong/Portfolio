@@ -482,7 +482,6 @@
   grid-template-columns: minmax(9rem, 0.26fr) minmax(0, 1fr);
   margin-bottom: clamp(48px, 8vw, 96px);
   padding: 12px 0 28px;
-  position: relative;
 }
 
 .sectionMarkerBlock {
@@ -1086,6 +1085,17 @@
   row-gap: clamp(32px, 5vw, 72px);
 }
 
+@media (min-width: 1024px) {
+  .section:not(.hero):not(.contactSection) {
+    padding-block: clamp(112px, 10vw, 160px);
+  }
+
+  .sectionLayout > .sectionField {
+    position: sticky;
+    top: calc(var(--chrome-offset) + 2rem);
+  }
+}
+
 .heroGrid {
   align-items: center;
 }
@@ -1116,12 +1126,8 @@
 }
 
 .sectionHeader {
-  background: var(--paper);
-  grid-column: 1 / -1;
   margin-bottom: clamp(32px, 5vw, 64px);
-  position: sticky;
-  top: var(--chrome-offset);
-  z-index: 3;
+  padding-bottom: 0;
 }
 
 .sectionLayout {
@@ -1157,7 +1163,9 @@
 }
 
 .sectionField {
+  align-self: start;
   min-height: clamp(16rem, 30vw, 30rem);
+  position: relative;
 }
 
 .aboutGrid {
@@ -1251,9 +1259,12 @@
     order: 2;
   }
 
-  .sectionHeader {
-    position: relative;
-    top: auto;
+  .sectionContent {
+    order: 1;
+  }
+
+  .sectionLayout > .sectionField {
+    order: 2;
   }
 }
 
@@ -1277,10 +1288,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sectionHeader {
-    position: relative;
-  }
-
   .projectRow::after,
   .researchRow::after,
   .domainItem::after,
