@@ -11,25 +11,27 @@ import { PROJECTS } from '@/content/projects';
 import { RESEARCH_NODES } from '@/content/research';
 import type { SceneState } from '@/content/types';
 import { setSceneFocus } from '@/lib/narrative/store';
+import { FieldPanel } from '@/scene/FieldPanel';
 import { splitLines, type SplitLines } from './lines';
-import { HeroSphere } from './HeroSphere';
 import styles from './overlay.module.css';
 
-const marqueeLabels = Array.from(
-  new Set([
-    ...PROJECTS.flatMap((project) => project.stack),
-    ...RESEARCH_NODES.filter((node) => node.kind !== 'core').map((node) => node.label),
-  ]),
-);
+const MOTION_DURATIONS = {
+  micro: 0.16,
+  reveal: 0.5,
+  scene: 0.8,
+} as const;
+
+const MOTION_EASES = {
+  standard: 'power2.out',
+  emphasized: 'power4.out',
+} as const;
 
 /**
  * A foreground item that can ask the field to inspect a related state.
  *
  * The DOM response and the scene response are driven from the same handler, so
- * a row's shift and the field's focus start on the same event rather than
- * arriving from a CSS transition and a JS listener that happen to be near each
- * other. The shift is a GSAP tween on the row itself; the row's children keep
- * their CSS transitions, and nothing is driven by two systems at once.
+ * a foreground item and its field state start on the same event. Layout stays
+ * fixed; hover feedback is expressed by rules and colour rather than movement.
  */
 function SceneFocus({
   state,
@@ -38,7 +40,6 @@ function SceneFocus({
   article = false,
   label,
   motion,
-  shift = 0,
 }: {
   state: SceneState;
   children: ReactNode;
@@ -46,33 +47,16 @@ function SceneFocus({
   article?: boolean;
   label?: string;
   motion?: string;
-  shift?: number;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const shiftTo = useRef<((value: number) => void) | null>(null);
-
-  const move = useCallback(
-    (value: number) => {
-      const element = ref.current;
-      if (!element || !shift) return;
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      if (!shiftTo.current) {
-        shiftTo.current = gsap.quickTo(element, 'x', { duration: 0.42, ease: 'power3.out' });
-      }
-      shiftTo.current(value);
-    },
-    [shift],
-  );
 
   const activate = useCallback(() => {
     setSceneFocus(state);
-    move(shift);
-  }, [move, shift, state]);
+  }, [state]);
 
   const clear = useCallback(() => {
     setSceneFocus(null);
-    move(0);
-  }, [move]);
+  }, []);
 
   const handleBlur = (event: FocusEvent<HTMLElement>) => {
     if (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget as Node)) clear();
@@ -180,8 +164,8 @@ export function Portfolio() {
             { yPercent: 108 },
             {
               yPercent: 0,
-              duration: isHero ? 1.05 : 0.9,
-              ease: 'power4.out',
+              duration: isHero ? MOTION_DURATIONS.scene : MOTION_DURATIONS.reveal,
+              ease: MOTION_EASES.emphasized,
               stagger: 0.075,
               delay: isHero ? 0.12 : 0,
               scrollTrigger: isHero
@@ -210,8 +194,8 @@ export function Portfolio() {
         {
           autoAlpha: 1,
           y: 0,
-          duration: 0.9,
-          ease: 'power3.out',
+          duration: MOTION_DURATIONS.reveal,
+          ease: MOTION_EASES.emphasized,
           stagger: 0.075,
           delay: 0.18,
           clearProps: 'transform',
@@ -225,8 +209,8 @@ export function Portfolio() {
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.7,
-            ease: 'power3.out',
+          duration: MOTION_DURATIONS.reveal,
+            ease: MOTION_EASES.emphasized,
             clearProps: 'transform',
             scrollTrigger: { trigger: element, start: 'top 90%', once: true },
           },
@@ -239,8 +223,8 @@ export function Portfolio() {
           { scaleX: 0 },
           {
             scaleX: 1,
-            duration: 0.8,
-            ease: 'power2.out',
+            duration: MOTION_DURATIONS.scene,
+            ease: MOTION_EASES.standard,
             scrollTrigger: { trigger: element, start: 'top 92%', once: true },
           },
         );
@@ -257,24 +241,24 @@ export function Portfolio() {
         const detail = pick('[data-motion="row-detail"]');
 
         const timeline = gsap.timeline({
-          defaults: { ease: 'power3.out', clearProps: 'transform' },
+          defaults: { ease: MOTION_EASES.emphasized, clearProps: 'transform' },
           scrollTrigger: { trigger: row, start: 'top 86%', once: true },
         });
 
-        if (index.length) timeline.fromTo(index, { autoAlpha: 0, x: -10 }, { autoAlpha: 1, x: 0, duration: 0.5 }, 0);
-        if (meta.length) timeline.fromTo(meta, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.5 }, 0.06);
+        if (index.length) timeline.fromTo(index, { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: MOTION_DURATIONS.reveal }, 0);
+        if (meta.length) timeline.fromTo(meta, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: MOTION_DURATIONS.reveal }, 0.06);
         if (lead.length)
           timeline.fromTo(
             lead,
             { autoAlpha: 0, y: 18 },
-            { autoAlpha: 1, y: 0, duration: 0.72, stagger: 0.06 },
+            { autoAlpha: 1, y: 0, duration: MOTION_DURATIONS.scene, stagger: 0.06 },
             0.1,
           );
         if (detail.length)
           timeline.fromTo(
             detail,
             { autoAlpha: 0, y: 12 },
-            { autoAlpha: 1, y: 0, duration: 0.6, stagger: 0.05 },
+            { autoAlpha: 1, y: 0, duration: MOTION_DURATIONS.reveal, stagger: 0.05 },
             0.22,
           );
       });
@@ -298,11 +282,11 @@ export function Portfolio() {
           focus
             .fromTo(
               element,
-              { filter: 'blur(10px)', opacity: 0, y: 10 },
-              { filter: 'blur(0px)', opacity: 1, y: 0, duration: 0.25 },
+              { opacity: 0, y: 10 },
+              { opacity: 1, y: 0, duration: MOTION_DURATIONS.micro },
             )
-            .to(element, { filter: 'blur(0px)', opacity: 1, y: 0, duration: 0.5 })
-            .to(element, { filter: 'blur(12px)', opacity: 0.15, y: -10, duration: 0.25 });
+            .to(element, { opacity: 1, y: 0, duration: MOTION_DURATIONS.reveal })
+            .to(element, { opacity: 0.25, y: -10, duration: MOTION_DURATIONS.micro });
         });
 
       // Parallax targets are always dedicated wrappers. An element that is both
@@ -342,11 +326,11 @@ export function Portfolio() {
         data-hero=""
       >
         <div className={styles.heroGrid}>
-          <div>
+          <div className={styles.heroContent}>
             <p className={styles.eyebrow} data-motion="hero">
               {INTRO.eyebrow}
             </p>
-            <h1 className="display" id="intro-title" data-motion="mask">
+            <h1 className={`${styles.heroName} display`} id="intro-title" data-motion="mask">
               {INTRO.title}
             </h1>
             <p className={styles.positioning} data-motion="hero">
@@ -360,11 +344,6 @@ export function Portfolio() {
                 Get in touch
               </a>
             </div>
-          </div>
-          <aside className={styles.heroAside} aria-label="Hero sphere and context" data-motion="hero">
-            <div className={styles.heroSphereContainer}>
-              <HeroSphere />
-            </div>
             <div data-parallax="light" className={styles.heroAsideContent}>
               <span className={styles.heroAsideRule} />
               <p className="mono">{INTRO.note}</p>
@@ -373,7 +352,8 @@ export function Portfolio() {
                 visible.
               </p>
             </div>
-          </aside>
+          </div>
+          <FieldPanel state="signal" align="right" className={styles.heroField} />
         </div>
       </section>
 
@@ -386,26 +366,30 @@ export function Portfolio() {
             description="A short account of the questions that connect the work."
             id="about-title"
           />
-          <div className={styles.aboutGrid} data-scene="image" data-motion="row">
-            <div className="body-copy" data-motion="row-lead">
-              {ABOUT.paragraphs.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-            </div>
-            <div className={styles.domainList} aria-label="Research domains">
-              {ABOUT.domains.map((domain) => (
-                <SceneFocus
-                  key={domain.label}
-                  state={domain.scene}
-                  className={styles.domainItem}
-                  label={domain.label}
-                  motion="row-detail"
-                  shift={8}
-                >
-                  <span className={styles.domainName}>{domain.label}</span>
-                  <span className={styles.domainDetail}>{domain.detail}</span>
-                </SceneFocus>
-              ))}
+          <div className={`${styles.sectionLayout} ${styles.layoutLeft}`}>
+            <FieldPanel state="pixel" align="left" className={styles.sectionField} />
+            <div className={styles.sectionContent}>
+              <div className={styles.aboutGrid} data-motion="row">
+                <div className="body-copy" data-motion="row-lead">
+                  {ABOUT.paragraphs.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </div>
+                <div className={styles.domainList} aria-label="Research domains">
+                  {ABOUT.domains.map((domain) => (
+                    <SceneFocus
+                      key={domain.label}
+                      state={domain.scene}
+                      className={styles.domainItem}
+                      label={domain.label}
+                      motion="row-detail"
+                    >
+                      <span className={styles.domainName}>{domain.label}</span>
+                      <span className={styles.domainDetail}>{domain.detail}</span>
+                    </SceneFocus>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -420,6 +404,8 @@ export function Portfolio() {
             description="Hover or focus an entry to inspect the related field state."
             id="work-title"
           />
+          <div className={`${styles.sectionLayout} ${styles.layoutRight}`}>
+            <div className={styles.sectionContent}>
           <div className={styles.projectList}>
             {PROJECTS.map((project, index) => (
               <SceneFocus
@@ -429,7 +415,6 @@ export function Portfolio() {
                 className={styles.projectRow}
                 label={project.title}
                 motion="row"
-                shift={10}
               >
                 <span className={styles.rowIndex} data-motion="row-index" data-scene={project.scene}>
                   {String(index + 1).padStart(2, '0')}
@@ -463,10 +448,13 @@ export function Portfolio() {
               </SceneFocus>
             ))}
           </div>
+            </div>
+            <FieldPanel state="features" align="right" className={styles.sectionField} />
+          </div>
         </div>
       </section>
 
-      <section className={styles.section} id="research" aria-labelledby="research-title">
+      <section className={styles.section} id="research" aria-labelledby="research-title" data-scene="uncertainty">
         <div className={styles.sectionInner}>
           <SectionHeading
             number="03"
@@ -475,6 +463,9 @@ export function Portfolio() {
             description="The background graph is a visual index. The readable record stays here."
             id="research-title"
           />
+          <div className={`${styles.sectionLayout} ${styles.layoutLeft}`}>
+            <FieldPanel state="uncertainty" align="left" className={styles.sectionField} />
+            <div className={styles.sectionContent}>
           <div className={styles.researchList}>
             {papers.map((node, index) => {
               const scene: SceneState = node.kind === 'open' ? 'uncertainty' : 'graph';
@@ -486,7 +477,6 @@ export function Portfolio() {
                   className={styles.researchRow}
                   label={node.label}
                   motion="row"
-                  shift={10}
                 >
                   <span className={styles.rowIndex} data-motion="row-index" data-scene={scene}>
                     {String(index + 1).padStart(2, '0')}
@@ -518,18 +508,7 @@ export function Portfolio() {
               );
             })}
           </div>
-        </div>
-        <div className={styles.marqueeBand} data-motion="fade" aria-hidden="true">
-          <div className={styles.marqueeTrack}>
-            {[0, 1].map((setIndex) => (
-              <div className={styles.marqueeSet} key={setIndex}>
-                {marqueeLabels.map((label) => (
-                  <span className={styles.marqueeItem} key={`${setIndex}-${label}`}>
-                    {label}
-                  </span>
-                ))}
-              </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
@@ -542,6 +521,8 @@ export function Portfolio() {
             title="Research and engineering, kept close to the evidence."
             id="experience-title"
           />
+          <div className={`${styles.sectionLayout} ${styles.layoutRight}`}>
+            <div className={styles.sectionContent}>
           <div className={styles.experienceList}>
             {EXPERIENCE.map((item) => (
               <article key={item.id} className={styles.experienceRow} data-motion="row">
@@ -588,6 +569,9 @@ export function Portfolio() {
                 </SceneFocus>
               ))}
             </div>
+          </div>
+            </div>
+            <FieldPanel state="graph" align="right" className={styles.sectionField} />
           </div>
         </div>
       </section>

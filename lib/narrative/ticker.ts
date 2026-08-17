@@ -8,10 +8,9 @@ import { scrollState } from './store';
  * One rAF for the whole DOM layer.
  *
  * The driver emits a sampled `NarrativeFrame` each tick; overlays subscribe and
- * write directly to refs. No component re-renders to animate. The WebGL layer
- * runs on R3F's own loop but reads the same `liveFrame` object rather than
- * re-sampling, so foreground and background can never describe different
- * moments of the same scroll.
+ * write directly to refs. No component re-renders to animate. WebGL panels use
+ * demand-driven R3F canvases and invalidate from this same tick, so foreground
+ * and field panels describe the same scroll moment.
  */
 
 export type FrameListener = (frame: NarrativeFrame) => void;
@@ -21,7 +20,7 @@ const listeners = new Set<FrameListener>();
 /**
  * The narrative frame, sampled exactly once per tick.
  *
- * Every consumer — DOM overlays and all four R3F components — reads this same
+ * Every consumer — DOM overlays and all visible R3F panels — reads this same
  * object. Each of them used to call `sample()` itself, which meant four
  * evaluations of the same function per frame and, worse, four chances to
  * disagree if any of them ran either side of a scroll update.

@@ -95,7 +95,7 @@ export function startNarrativeDriver({ reducedMotion }: DriverOptions): () => vo
 
     scrollState.time = time - startTime;
 
-    // F+ uses a scalar gesture energy: pointer movement attacks it by the
+    // The field uses a scalar gesture energy: pointer movement attacks it by the
     // normalized travel distance, then the render loop releases it at .96 per
     // frame. There is intentionally no second velocity smoother here.
     scrollState.pointerEnergy = reducedMotion ? 0 : scrollState.pointerEnergy * 0.96;

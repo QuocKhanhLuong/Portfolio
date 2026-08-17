@@ -22,7 +22,7 @@ export const scrollState = {
   /** Pointer in normalized device coords, -1..1. */
   pointerX: 0,
   pointerY: 0,
-  /** Short-lived F+ movement energy, capped at .85 and released at .96/frame. */
+  /** Short-lived field movement energy, capped at .85 and released at .96/frame. */
   pointerEnergy: 0,
   /** Scene state temporarily requested by a focused foreground item. */
   focusState: 0,
