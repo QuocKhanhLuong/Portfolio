@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: rnd-airtable-sync
+  cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -22,6 +26,6 @@ jobs:
       - name: Sync recent GitHub activity to Airtable
         env:
           AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
-          GH_SYNC_TOKEN: ${{ secrets.GH_SYNC_TOKEN }}
+          GH_SYNC_TOKEN: ${{ secrets.GH_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
           LOOKBACK_HOURS: ${{ inputs.lookback_hours || '30' }}
         run: python rnd-control/sync_airtable.py
