@@ -8,6 +8,7 @@ import urllib.request
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 CONFIG = json.loads(Path(__file__).with_name("projects.json").read_text())
 AIRTABLE_TOKEN = os.environ["AIRTABLE_TOKEN"]
@@ -18,6 +19,7 @@ BASE_ID = CONFIG["base_id"]
 WORKSTREAMS_TABLE = CONFIG["workstreams_table"]
 CHECKLOGS_TABLE = CONFIG["checklogs_table"]
 PROJECTS = CONFIG["projects"]
+LOCAL_TZ = ZoneInfo(CONFIG.get("timezone", "Asia/Bangkok"))
 
 
 def http_json(url: str, *, method: str = "GET", headers=None, body=None):
@@ -50,24 +52,64 @@ def at(method: str, table: str, body=None, query=None):
     )
 
 
+def all_airtable_records(table: str):
+    records = []
+    offset = None
+    while True:
+        query = {"pageSize": 100}
+        if offset:
+            query["offset"] = offset
+        payload = at("GET", table, query=query)
+        records.extend(payload.get("records", []))
+        offset = payload.get("offset")
+        if not offset:
+            return records
+
+
 def workstreams():
-    rows = at("GET", WORKSTREAMS_TABLE, query={"pageSize": 100}).get("records", [])
-    return {r["fields"].get("Name"): r for r in rows}
+    return {
+        r["fields"].get("Name"): r
+        for r in all_airtable_records(WORKSTREAMS_TABLE)
+        if r["fields"].get("Name")
+    }
 
 
-def existing_shas():
-    rows = at("GET", CHECKLOGS_TABLE, query={"pageSize": 100}).get("records", [])
-    return {r["fields"].get("Git SHA") for r in rows if r["fields"].get("Git SHA")}
+def existing_git_state():
+    seen_shas = set()
+    daily_titles = set()
+    for r in all_airtable_records(CHECKLOGS_TABLE):
+        fields = r.get("fields", {})
+        sha = fields.get("Git SHA")
+        if sha:
+            seen_shas.add(sha)
+        title = fields.get("Log Title", "")
+        if title.startswith("Git sync — "):
+            daily_titles.add(title)
+    return seen_shas, daily_titles
 
 
 def commit_groups(repo: str, since: datetime):
     owner, name = repo.split("/", 1)
-    q = urllib.parse.urlencode({"since": since.isoformat(), "per_page": 100})
-    commits = gh(f"/repos/{owner}/{name}/commits?{q}")
     groups = defaultdict(list)
-    for c in commits:
-        dt = datetime.fromisoformat(c["commit"]["committer"]["date"].replace("Z", "+00:00"))
-        groups[dt.date().isoformat()].append(c)
+    page = 1
+    while True:
+        q = urllib.parse.urlencode(
+            {"since": since.isoformat(), "per_page": 100, "page": page}
+        )
+        commits = gh(f"/repos/{owner}/{name}/commits?{q}")
+        if not commits:
+            break
+        for c in commits:
+            dt_utc = datetime.fromisoformat(
+                c["commit"]["committer"]["date"].replace("Z", "+00:00")
+            )
+            local_day = dt_utc.astimezone(LOCAL_TZ).date().isoformat()
+            groups[local_day].append(c)
+        if len(commits) < 100:
+            break
+        page += 1
+        if page > 10:
+            break
     return groups
 
 
@@ -83,7 +125,7 @@ def title_from_messages(messages):
 def main():
     since = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
     ws = workstreams()
-    seen = existing_shas()
+    seen_shas, existing_daily_titles = existing_git_state()
     new_logs = []
     touched = {}
 
@@ -98,49 +140,78 @@ def main():
             continue
 
         for day, commits in sorted(groups.items()):
-            fresh = [c for c in commits if c["sha"] not in seen]
+            log_title = f"Git sync — {workstream_name} — {day}"
+            if log_title in existing_daily_titles:
+                continue
+
+            fresh = [c for c in commits if c["sha"] not in seen_shas]
             if not fresh:
                 continue
+
+            fresh.sort(
+                key=lambda c: c["commit"]["committer"]["date"], reverse=True
+            )
             messages = [c["commit"]["message"] for c in fresh]
             shas = [c["sha"] for c in fresh]
             urls = [c["html_url"] for c in fresh]
             summary = title_from_messages(messages)
             last = fresh[0]
-            fields = {
-                "Log Title": f"Git sync — {workstream_name} — {day}",
-                "Date": last["commit"]["committer"]["date"],
-                "Workstream Name": workstream_name,
-                "Workstream": [ws[workstream_name]["id"]],
-                "Log Type": "Progress",
-                "Summary": summary,
-                "Done": "\n".join(f"- {m.splitlines()[0]}" for m in messages[:12]),
-                "Links": "\n".join(urls[:12]),
-                "Tags": ["code"],
-                "Source": "GitHub",
-                "Git SHA": shas[0],
-                "Git Activity URL": urls[0],
-            }
-            new_logs.append({"fields": fields})
-            touched[workstream_name] = (last["commit"]["committer"]["date"], summary)
+            last_dt = last["commit"]["committer"]["date"]
+
+            new_logs.append(
+                {
+                    "fields": {
+                        "Log Title": log_title,
+                        "Date": last_dt,
+                        "Workstream Name": workstream_name,
+                        "Workstream": [ws[workstream_name]["id"]],
+                        "Log Type": "Progress",
+                        "Summary": summary,
+                        "Done": "\n".join(
+                            f"- {m.splitlines()[0]}" for m in messages[:12]
+                        ),
+                        "Links": "\n".join(urls[:12]),
+                        "Tags": ["code"],
+                        "Source": "GitHub",
+                        "Git SHA": shas[0],
+                        "Git Activity URL": urls[0],
+                    }
+                }
+            )
+            existing_daily_titles.add(log_title)
+            seen_shas.update(shas)
+            touched[workstream_name] = last_dt
 
     for i in range(0, len(new_logs), 10):
-        at("POST", CHECKLOGS_TABLE, {"records": new_logs[i:i+10], "typecast": True})
+        at("POST", CHECKLOGS_TABLE, {"records": new_logs[i : i + 10], "typecast": True})
 
-    for name, (dt, summary) in touched.items():
+    for name, dt in touched.items():
         record = ws[name]
-        at("PATCH", WORKSTREAMS_TABLE, {
-            "records": [{
-                "id": record["id"],
-                "fields": {
-                    "Last Update": dt[:10],
-                    "Last Git Sync": dt,
-                    "Current Focus": summary,
-                },
-            }],
-            "typecast": True,
-        })
+        at(
+            "PATCH",
+            WORKSTREAMS_TABLE,
+            {
+                "records": [
+                    {
+                        "id": record["id"],
+                        "fields": {
+                            "Last Update": datetime.fromisoformat(
+                                dt.replace("Z", "+00:00")
+                            )
+                            .astimezone(LOCAL_TZ)
+                            .date()
+                            .isoformat(),
+                            "Last Git Sync": dt,
+                        },
+                    }
+                ],
+                "typecast": True,
+            },
+        )
 
-    print(f"created {len(new_logs)} daily checklogs across {len(touched)} workstreams")
+    print(
+        f"created {len(new_logs)} daily checklogs across {len(touched)} workstreams"
+    )
 
 
 if __name__ == "__main__":
