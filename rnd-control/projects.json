@@ -3,11 +3,11 @@
   "workstreams_table": "tblz0lYOWfVaMynOY",
   "checklogs_table": "tbl3DVjsUaw3VC62q",
   "timezone": "Asia/Bangkok",
-  "projects": {
-    "QuocKhanhLuong/Self-Audit": "Self-Audit",
-    "QuocKhanhLuong/MamaGift": "MamaGift",
-    "QuocKhanhLuong/ResearchRadar": "ResearchRadar",
-    "QuocKhanhLuong/3DGS": "3DGS",
-    "AI20K-Build-Phase-Cohort-3/P-112": "VinVivu / P-112"
-  }
+  "projects": [
+    {"repo": "QuocKhanhLuong/Self-Audit", "workstream_id": "recrSruWtWSL0FzRT"},
+    {"repo": "QuocKhanhLuong/MamaGift", "workstream_id": "recDLONAnENambfdu"},
+    {"repo": "QuocKhanhLuong/ResearchRadar", "workstream_id": "recGHHu9JC9D4iMyH"},
+    {"repo": "QuocKhanhLuong/3DGS", "workstream_id": "recLP3hp41Om67IoL"},
+    {"repo": "AI20K-Build-Phase-Cohort-3/P-112", "workstream_id": "recMR27VF87C6vOx5"}
+  ]
 }
