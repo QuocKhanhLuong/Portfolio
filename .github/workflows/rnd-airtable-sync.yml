@@ -4,11 +4,24 @@ on:
   workflow_dispatch:
     inputs:
       lookback_hours:
-        description: Hours of Git history to scan
+        description: Số giờ lịch sử Git cần kiểm tra (1–8760)
         required: false
-        default: "30"
+        default: "36"
+        type: string
+      dry_run:
+        description: Chỉ kiểm tra, không ghi dữ liệu vào Airtable
+        required: false
+        default: false
+        type: boolean
   schedule:
-    - cron: "15 17 * * *" # 00:15 Asia/Bangkok
+    - cron: "15 17 * * *" # 00:15 hằng ngày, Asia/Bangkok (UTC+7)
+  push:
+    branches: [main]
+    paths:
+      - rnd-control/sync_airtable.py
+      - rnd-control/projects.json
+      - rnd-control/tests/**
+      - .github/workflows/rnd-airtable-sync.yml
 
 permissions:
   contents: read
@@ -20,12 +33,31 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-      - name: Sync recent GitHub activity to Airtable
+      - name: Kiểm tra Python và cấu hình
+        run: |
+          python3 -c 'import sys; assert sys.version_info >= (3, 10), "Python 3.10+ required"'
+          python3 -m json.tool rnd-control/projects.json > /dev/null
+          python3 -m py_compile rnd-control/sync_airtable.py
+
+      - name: Kiểm thử logic đồng bộ (không gọi mạng)
+        run: python3 -m unittest discover -s rnd-control/tests -v
+
+      - name: Đồng bộ GitHub sang Airtable
         env:
           AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
           GH_SYNC_TOKEN: ${{ secrets.GH_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
-          LOOKBACK_HOURS: ${{ inputs.lookback_hours || '30' }}
-        run: python rnd-control/sync_airtable.py
+          LOOKBACK_HOURS: ${{ inputs.lookback_hours || '36' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          SYNC_REPORT_PATH: ${{ runner.temp }}/rnd-sync-status.json
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python3 rnd-control/sync_airtable.py --dry-run
+          else
+            python3 rnd-control/sync_airtable.py
+          fi
