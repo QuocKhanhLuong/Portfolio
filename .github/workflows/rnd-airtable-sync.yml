@@ -1,0 +1,27 @@
+name: R&D Airtable Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      lookback_hours:
+        description: Hours of Git history to scan
+        required: false
+        default: "30"
+  schedule:
+    - cron: "15 17 * * *" # 00:15 Asia/Bangkok
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync recent GitHub activity to Airtable
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+          GH_SYNC_TOKEN: ${{ secrets.GH_SYNC_TOKEN }}
+          LOOKBACK_HOURS: ${{ inputs.lookback_hours || '30' }}
+        run: python rnd-control/sync_airtable.py
