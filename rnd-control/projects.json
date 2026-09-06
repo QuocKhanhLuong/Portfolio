@@ -1,0 +1,11 @@
+{
+  "base_id": "app9IpgoLjTQYwsW4",
+  "workstreams_table": "tblz0lYOWfVaMynOY",
+  "checklogs_table": "tbl3DVjsUaw3VC62q",
+  "projects": {
+    "QuocKhanhLuong/Self-Audit": "Self-Audit",
+    "QuocKhanhLuong/MamaGift": "MamaGift",
+    "QuocKhanhLuong/ResearchRadar": "ResearchRadar",
+    "QuocKhanhLuong/3DGS": "3DGS"
+  }
+}
